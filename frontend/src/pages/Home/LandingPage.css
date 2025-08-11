@@ -1,0 +1,56 @@
+/* Full-screen gradient background
+.landing-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(to bottom right, #2d6cdf, #7c4dff);
+}
+
+.landing-content {
+  text-align: center;
+  color: white;
+}
+
+.landing-content h1 {
+  font-size: 2.8rem;
+  margin-bottom: 10px;
+}
+
+.landing-content p {
+  font-size: 1.2rem;
+  margin-bottom: 30px;
+  color: #e0e0e0;
+}
+
+.landing-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.btn {
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background-color: white;
+  color: #2d6cdf;
+}
+
+.btn-secondary {
+  background-color: white;
+  color: #7c4dff;
+}
+
+.btn:hover {
+  opacity: 0.9;
+} */
