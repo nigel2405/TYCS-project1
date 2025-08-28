@@ -1,5 +1,13 @@
 const mongoose = require("mongoose");
-module.exports = mongoose.model("Student", new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-  rfid: { type: String, unique: true }
-}));
+
+const studentSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",   // 👈 link to User collection
+    required: true,
+  },
+  name: { type: String, required: true },
+  email: { type: String, required: true }
+});
+
+module.exports = mongoose.model("Student", studentSchema);

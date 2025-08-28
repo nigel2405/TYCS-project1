@@ -8,6 +8,8 @@ import Register from '../pages/Register';
 
 import AdminDashboard from '../pages/Admin/Dashboard';
 import ManageStudents from '../pages/Admin/ManageStudents';
+import UnassignedRFIDs from "../pages/Admin/UnassignedRFIDs";
+
 
 import TeacherDashboard from '../pages/Teacher/Dashboard';
 import AttendancePage from '../pages/Teacher/AttendancePage';
@@ -28,6 +30,7 @@ const AppRoutes = () => {
       {/* Admin Routes */}
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
       <Route path="/admin/manage-students" element={<ManageStudents />} />
+      <Route path="/admin/unassigned" element={<UnassignedRFIDs />} />
 
       {/* Teacher Routes */}
       <Route path="/teacher/dashboard" element={<TeacherDashboard />} />

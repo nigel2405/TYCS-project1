@@ -1,8 +1,14 @@
 const express = require("express");
 const router = express.Router();
-const { getDashboard } = require("../controllers/studentController");
-const { protect, isStudent } = require("../middlewares/authMiddleware");
+const studentController = require("../controllers/studentController");
 
-router.get("/dashboard", protect, isStudent, getDashboard);
+// Get all students
+router.get("/", studentController.getAllStudents);
+
+// Assign RFID to student
+router.post("/assign-rfid", studentController.assignRFID);
+
+// Log attendance for student
+router.post("/log-attendance", studentController.logAttendance);
 
 module.exports = router;

@@ -7,6 +7,13 @@ const api = axios.create({
   },
 });
 
-// export const login = (credentials) => API.post("/auth/login", credentials);
-// export const register = (userData) => API.post("/auth/register", userData);
- export default api;
+// Attach JWT automatically
+api.interceptors.request.use((req) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    req.headers.Authorization = `Bearer ${token}`;
+  }
+  return req;
+});
+
+export default api;
