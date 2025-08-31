@@ -1,7 +1,7 @@
 // src/pages/AdminDashboard.js
 import React, { useState, useEffect } from "react";
 import { FaUser, FaIdCard, FaUserCheck, FaClock } from "react-icons/fa";
-import axios from "../../services/api";
+import api from "../../services/api";  // ✅ Fixed import
 import ManageStudents from "./ManageStudents";
 import UnassignedRFIDs from "./UnassignedRFIDs";
 
@@ -15,14 +15,14 @@ const AdminDashboard = () => {
     const fetchDashboard = async () => {
       try {
         const [statsRes, studentsRes, attendanceRes] = await Promise.all([
-          axios.get("/admin/dashboard"),
-          axios.get("/students"),
-          axios.get("/attendance/rate"),
+          api.get("/admin/dashboard"),   // ✅ Changed axios → api
+          api.get("/students"),
+          api.get("/attendance/rate"),
         ]);
 
         setStats({
           ...statsRes.data.stats,
-          attendanceRate: attendanceRes.data.rate || 0,
+          attendanceRate: attendanceRes.data?.rate || 0,
         });
         setStudents(studentsRes.data);
       } catch (err) {
@@ -35,7 +35,7 @@ const AdminDashboard = () => {
 
   const refreshStudents = async () => {
     try {
-      const res = await axios.get("/students");
+      const res = await api.get("/students"); // ✅ Changed axios → api
       setStudents(res.data);
     } catch (err) {
       console.error("Error refreshing students:", err);
@@ -44,7 +44,7 @@ const AdminDashboard = () => {
 
   const refreshStats = async () => {
     try {
-      const res = await axios.get("/admin/dashboard");
+      const res = await api.get("/admin/dashboard"); // ✅ Changed axios → api
       setStats((prev) => ({ ...prev, ...res.data.stats }));
     } catch (err) {
       console.error("Error refreshing stats:", err);
@@ -65,7 +65,7 @@ const AdminDashboard = () => {
         <StatCard label="Total Students" value={stats.students} icon={<FaUser className="text-3xl text-blue-500" />} />
         <StatCard label="Total Teachers" value={stats.teachers} icon={<FaUserCheck className="text-3xl text-green-500" />} />
         <StatCard label="Unassigned RFID Cards" value={stats.unassignedRFIDs} icon={<FaIdCard className="text-3xl text-red-500" />} />
-        <StatCard label="Avg. Attendance Rate" value={`${Math.round(stats.attendanceRate * 100)}%`} icon={<FaClock className="text-3xl text-indigo-500" />} />
+        <StatCard label="Avg. Attendance Rate" value={`${Math.round((stats.attendanceRate || 0) * 100)}%`} icon={<FaClock className="text-3xl text-indigo-500" />} />
       </div>
 
       {/* Tabs */}
@@ -94,12 +94,9 @@ const AdminDashboard = () => {
                 </thead>
                 <tbody>
                   {students.map((s) => (
-                    <tr
-                      key={s._id}
-                      className="border-b hover:bg-gray-100 transition"
-                    >
-                      <td className="p-3">{s.name}</td>
-                      <td className="p-3">{s.email}</td>
+                    <tr key={s._id} className="border-b hover:bg-gray-100 transition">
+                      <td className="p-3">{s.userId?.name}</td>
+                      <td className="p-3">{s.userId?.email}</td>
                       <td className="p-3">{s.className}</td>
                       <td className="p-3">
                         <span

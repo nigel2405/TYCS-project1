@@ -7,7 +7,7 @@ const bcrypt = require("bcryptjs");
 
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, role, rfidTag } = req.body;
+    const { name, email, password, role, rfidTag, className } = req.body;
 
     // 1️⃣ Hash password
     const hashed = await bcrypt.hash(password, 10);
@@ -17,11 +17,19 @@ exports.register = async (req, res) => {
 
     // 3️⃣ Create role-specific document
     if (role === "student") {
-      await Student.create({ user: user._id, rfidTag }); // ✅ only save reference + RFID
+      if (!className) {
+        return res.status(400).json({ message: "className is required for students" });
+      }
+
+      await Student.create({
+        userId: user._id,
+        rfidTag: rfidTag || null,
+        className: className, // ✅ store class here
+      });
     } else if (role === "teacher") {
-      await Teacher.create({ user: user._id });          // ✅ no name/email here
+      await Teacher.create({ userId: user._id });
     } else if (role === "admin") {
-      await Admin.create({ user: user._id });            // ✅ same
+      await Admin.create({ userId: user._id });
     }
 
     res.status(201).json({ message: "User registered successfully", user });

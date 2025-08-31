@@ -21,7 +21,11 @@ const ManageStudents = ({ onAssignmentComplete }) => {
         axios.get("/students"),
         axios.get("/rfid/unassigned"),
       ]);
-      setStudents(studentsRes.data);
+
+      // ✅ Only keep students who do NOT already have an RFID assigned
+      const unassignedStudents = studentsRes.data.filter((s) => !s.rfidTag);
+
+      setStudents(unassignedStudents);
       setUnassignedRFIDs(rfidRes.data);
     } catch (err) {
       console.error("❌ Error fetching data:", err);
@@ -46,7 +50,11 @@ const ManageStudents = ({ onAssignmentComplete }) => {
       });
 
       setStatus({ type: "success", message: res.data.message });
+
+      // ✅ Remove the assigned RFID + student from dropdowns
       setUnassignedRFIDs(unassignedRFIDs.filter((r) => r.uid !== rfidTag));
+      setStudents(students.filter((s) => s._id !== studentId));
+
       setRfidTag("");
       setStudentId("");
       if (onAssignmentComplete) onAssignmentComplete();
@@ -100,9 +108,9 @@ const ManageStudents = ({ onAssignmentComplete }) => {
               <option value="">-- Choose a Student --</option>
               {students.map((s) => (
                 <option key={s._id} value={s._id}>
-                  {s?.name || s?.userId?.name} ({s?.email || s?.userId?.email})
+                  {s.userId?.name} ({s.userId?.email})
+                  {s.className ? ` - ${s.className}` : ""}
                 </option>
-
               ))}
             </select>
           </div>

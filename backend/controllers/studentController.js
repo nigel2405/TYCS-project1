@@ -1,6 +1,6 @@
 const Student = require("../models/Student");
 const Attendance = require("../models/Attendance");
-const UnassignedRFID = require("../models/UnassignedRFID"); // ✅ import
+const UnassignedRFID = require("../models/UnassignedRFID");
 
 // ============================
 // Get all students
@@ -31,7 +31,7 @@ exports.assignRFID = async (req, res) => {
       studentId,
       { rfidTag },
       { new: true }
-    );
+    ).populate("userId", "name email");
 
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
@@ -40,9 +40,12 @@ exports.assignRFID = async (req, res) => {
     // Remove from unassigned list (if it was there)
     await UnassignedRFID.findOneAndDelete({ uid: rfidTag });
 
-    console.log(`✅ RFID [${rfidTag}] assigned to student: ${student.name || student.userId.name}`);
+    console.log(`✅ RFID [${rfidTag}] assigned to student: ${student.userId?.name}`);
 
-    res.json({ message: "RFID card assigned successfully", student });
+    res.json({ 
+      message: "RFID card assigned successfully", 
+      student 
+    });
   } catch (error) {
     console.error("❌ Error assigning RFID:", error);
     res.status(500).json({ message: "Error assigning RFID", error });
@@ -62,16 +65,16 @@ exports.logAttendance = async (req, res) => {
       return res.status(400).json({ message: "RFID tag is required" });
     }
 
-    // Find student with this RFID
-    const student = await Student.findOne({ rfidTag });
+    // Find student with this RFID + populate
+    const student = await Student.findOne({ rfidTag }).populate("userId", "name email");
 
     if (!student) {
       console.warn(`⚠️ Unknown RFID scanned: ${rfidTag}`);
 
       // Save into UnassignedRFID if not already stored
-      let unassigned = await UnassignedRFID.findOne({ uid: rfidTag }); // ✅ use uid
+      let unassigned = await UnassignedRFID.findOne({ uid: rfidTag });
       if (!unassigned) {
-        unassigned = await UnassignedRFID.create({ uid: rfidTag }); // ✅ use uid
+        unassigned = await UnassignedRFID.create({ uid: rfidTag });
         console.log(`📝 Stored unassigned RFID: ${rfidTag}`);
       }
 
@@ -88,14 +91,14 @@ exports.logAttendance = async (req, res) => {
       status: "Present"
     });
 
-    console.log(`✅ Attendance logged for ${student.name} (RFID: ${rfidTag})`);
+    console.log(`✅ Attendance logged for ${student.userId?.name} (RFID: ${rfidTag})`);
 
     res.json({
       message: "Attendance marked successfully",
       student: {
         id: student._id,
-        name: student.name,
-        email: student.email,
+        name: student.userId?.name,
+        email: student.userId?.email,
         rfidTag: student.rfidTag
       },
       attendance
