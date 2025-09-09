@@ -21,35 +21,38 @@ const Login = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', formData);
+  try {
+    const res = await axios.post('http://localhost:5000/api/auth/login', formData);
 
-      const { token, role } = res.data;
+    const { token, role, name } = res.data;
 
-      console.log("ROLE FROM BACKEND:", role); // ✅ ADD THIS LINE
+    console.log("ROLE FROM BACKEND:", role);
+    console.log("NAME FROM BACKEND:", name);
 
+    // ✅ Save student name
+    if (name) localStorage.setItem("studentName", name);
 
-      login(token, role); // Save token + role to context + localStorage
+    // ✅ Save token + role
+    login(token, role);
 
-      // Navigate to correct dashboard
-      if (role.toLowerCase() === 'student') {
-        navigate('/student/dashboard');
-      } else if (role === 'admin') {
-        navigate('/admin/dashboard');
-      } else if (role === 'teacher') {
-        navigate('/teacher/dashboard');
-      } else {
-        alert('Unknown role. Cannot redirect.');
-      }
-
-    } catch (err) {
-      console.error('Login failed:', err);
-      alert('Invalid email or password');
+    // Navigate
+    if (role.toLowerCase() === "student") {
+      navigate("/student/dashboard");
+    } else if (role === "admin") {
+      navigate("/admin/dashboard");
+    } else if (role === "teacher") {
+      navigate("/teacher/dashboard");
+    } else {
+      alert("Unknown role. Cannot redirect.");
     }
-  };
+  } catch (err) {
+    console.error("Login failed:", err);
+    alert("Invalid email or password");
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 p-6">

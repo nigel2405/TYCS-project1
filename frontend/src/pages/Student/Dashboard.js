@@ -1,117 +1,119 @@
 import React from 'react';
-import { FaCalendarAlt, FaBell } from 'react-icons/fa';
+import { FaCalendarAlt, FaBell, FaUser } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 
 const StudentDashboard = () => {
-  const attendanceRate = 80;
-  const daysPresent = 20;
-  const totalDays = 25;
-  const alertThreshold = 75;
-  const recentAttendance = [
-    { date: '2024-07-29', time: '09:00 AM', status: 'Present' },
-    { date: '2024-07-28', time: '09:15 AM', status: 'Present' },
-    { date: '2024-07-27', time: '-', status: 'Absent' },
-    { date: '2024-07-26', time: '08:45 AM', status: 'Present' },
-  ];
+  const navigate = useNavigate();
+
+  // Example: Getting student name from localStorage (set after login)
+  const studentName = localStorage.getItem("studentName") || "Student";
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("studentName");
+    navigate("/login");
+  };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+    <div className="flex min-h-screen bg-gradient-to-r from-blue-50 to-purple-50">
+      {/* Sidebar */}
+      <div className="w-72 bg-white shadow-lg p-6 flex flex-col justify-between">
         <div>
-          <h2 className="text-2xl font-semibold">Dashboard</h2>
-          <p className="text-sm text-gray-500">Welcome back, User</p>
+          {/* Student Info */}
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+              <FaUser className="text-blue-600 text-xl" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-700">{studentName}</h3>
+              <p className="text-sm text-gray-500">Student</p>
+            </div>
+          </div>
+
+          {/* Attendance Rate */}
+          <div className="bg-white shadow rounded-xl p-4 mb-4 border-l-4 border-blue-500">
+            <div className="flex justify-between items-center mb-2">
+              <p className="font-medium text-gray-600">Attendance Rate</p>
+              <FaCalendarAlt className="text-blue-500 text-lg" />
+            </div>
+            <p className="text-2xl font-bold text-blue-700">--%</p>
+            <p className="text-sm text-gray-400">This month</p>
+          </div>
+
+          {/* Days Present */}
+          <div className="bg-white shadow rounded-xl p-4 mb-4 border-l-4 border-green-500">
+            <div className="flex justify-between items-center mb-2">
+              <p className="font-medium text-gray-600">Days Present</p>
+              <FaCalendarAlt className="text-green-500 text-lg" />
+            </div>
+            <p className="text-2xl font-bold text-green-600">--</p>
+            <p className="text-sm text-gray-400">Out of -- days</p>
+          </div>
+
+          {/* Alert Status */}
+          <div className="bg-white shadow rounded-xl p-4 border-l-4 border-yellow-500">
+            <div className="flex justify-between items-center mb-2">
+              <p className="font-medium text-gray-600">Alert Status</p>
+              <FaBell className="text-yellow-500 text-lg" />
+            </div>
+            <span className="inline-block bg-yellow-100 text-yellow-600 px-3 py-1 rounded-full text-sm font-semibold">
+              --
+            </span>
+            <p className="text-sm text-gray-400 mt-1">Attendance level</p>
+          </div>
         </div>
-        <button className="border px-4 py-2 rounded-md text-sm hover:bg-gray-100">
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className="w-full mt-6 px-5 py-2 rounded-lg bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold shadow hover:opacity-90 transition"
+        >
           Logout
         </button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-        {/* Attendance Rate */}
-        <div className="bg-white shadow rounded-lg p-4">
-          <div className="flex justify-between items-center mb-2">
-            <p className="font-medium">Attendance Rate</p>
-            <FaCalendarAlt className="text-gray-400" />
-          </div>
-          <p className="text-2xl font-bold">{attendanceRate}%</p>
-          <p className="text-sm text-gray-500">This month</p>
-        </div>
-
-        {/* Days Present */}
-        <div className="bg-white shadow rounded-lg p-4">
-          <div className="flex justify-between items-center mb-2">
-            <p className="font-medium">Days Present</p>
-            <FaCalendarAlt className="text-gray-400" />
-          </div>
-          <p className="text-2xl font-bold">{daysPresent}</p>
-          <p className="text-sm text-gray-500">Out of {totalDays} days</p>
-        </div>
-
-        {/* Alert Status */}
-        <div className="bg-white shadow rounded-lg p-4">
-          <div className="flex justify-between items-center mb-2">
-            <p className="font-medium">Alert Status</p>
-            <FaBell className="text-gray-400" />
-          </div>
-          <span className="inline-block bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm font-semibold">
-            Good
-          </span>
-          <p className="text-sm text-gray-500 mt-1">Above threshold</p>
-        </div>
+      {/* Main Content */}
+      <div className="flex-1 p-8">
+      {/* Header */}
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-blue-700">Student Dashboard</h2>
+        <p className="text-sm text-gray-500">
+          Welcome back, {studentName} 👋
+        </p>
       </div>
 
-      {/* Recent Attendance */}
-      <div className="bg-white shadow rounded-lg p-6 mb-10">
-        <h3 className="text-xl font-semibold mb-1">Recent Attendance</h3>
-        <p className="text-sm text-gray-500 mb-4">
-          Your attendance record for the last 5 days
-        </p>
 
-        <ul>
-          {recentAttendance.map((entry, idx) => (
-            <li
-              key={idx}
-              className="flex justify-between items-center py-3 border-b last:border-none"
-            >
-              <div>
-                <p className="font-medium">{entry.date}</p>
-                <p className="text-sm text-gray-500">{entry.time}</p>
-              </div>
-              {entry.status === 'Present' ? (
-                <span className="bg-blue-100 text-blue-600 px-4 py-1 rounded-full text-sm">
-                  Present
-                </span>
-              ) : (
-                <span className="bg-red-100 text-red-600 px-4 py-1 rounded-full text-sm">
-                  Absent
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      </div>
+        {/* Recent Attendance */}
+        <div className="bg-white shadow-lg rounded-2xl p-6 mb-10">
+          <h3 className="text-xl font-semibold text-purple-700 mb-1">Recent Attendance</h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Your latest attendance records will appear here.
+          </p>
 
-      {/* Low Attendance Alert */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
-          <FaBell /> Low Attendance Alert
-        </h3>
-        <p className="text-sm text-gray-500 mb-3">
-          Get notified when your attendance falls below {alertThreshold}%
-        </p>
-        <div className="bg-gray-100 p-4 rounded-md mb-4">
-          <p className="text-sm">
-            Current attendance:{' '}
-            <span className="font-semibold">{attendanceRate}%</span>
-          </p>
-          <p className="text-sm text-gray-500">
-            Threshold: {alertThreshold}%
-          </p>
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-6 rounded-xl text-center text-gray-400">
+            📅 No attendance records yet
+          </div>
         </div>
-        <button className="border px-4 py-2 rounded-md text-sm hover:bg-gray-100 flex items-center gap-2">
-          <FaBell /> Send Test Alert
-        </button>
+
+        {/* Low Attendance Alert */}
+        <div className="bg-white shadow-lg rounded-2xl p-6">
+          <h3 className="text-lg font-semibold mb-2 flex items-center gap-2 text-red-600">
+            <FaBell /> Low Attendance Alert
+          </h3>
+          <p className="text-sm text-gray-500 mb-3">
+            Get notified if your attendance falls below the set threshold.
+          </p>
+          <div className="bg-gradient-to-r from-red-50 to-red-100 p-5 rounded-xl mb-4">
+            <p className="text-sm text-gray-700">
+              Current attendance: <span className="font-semibold">--%</span>
+            </p>
+            <p className="text-sm text-gray-500">Threshold: --%</p>
+          </div>
+          <button className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-2 rounded-lg font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
+            <FaBell /> Send Test Alert
+          </button>
+        </div>
       </div>
     </div>
   );

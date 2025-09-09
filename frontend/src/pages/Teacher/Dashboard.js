@@ -1,132 +1,92 @@
 import React, { useState } from "react";
-import { Card, CardContent } from "../../components/ui/Card";
-import { Users, BookOpen, BarChart3, CheckCircle } from "lucide-react";
+import { FaChalkboardTeacher, FaUsers, FaClipboardList, FaSignOutAlt } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
 const TeacherDashboard = () => {
   const [activeTab, setActiveTab] = useState("students");
+  const navigate = useNavigate();
 
-  // TODO: Replace with API data
-  const stats = [
-    { label: "My Students", value: 2, icon: <Users size={28} /> },
-    { label: "Present Today", value: 0, icon: <CheckCircle size={28} /> },
-    { label: "Attendance Rate", value: "0%", icon: <BarChart3 size={28} /> },
-    { label: "Total Classes", value: 1, icon: <BookOpen size={28} /> },
-  ];
+  // Example: Get teacher name from localStorage
+  const teacherName = localStorage.getItem("teacherName") || "Teacher";
 
-  const students = [
-    { id: "S001", name: "John Doe", className: "10A", rfid: "RF12345" },
-    { id: "S002", name: "Jane Smith", className: "10A", rfid: "RF67890" },
-  ];
-
-  const attendanceLogs = [
-    { id: 1, name: "John Doe", className: "10A", date: "2025-08-18", time: "09:10 AM", status: "Present" },
-    { id: 2, name: "Jane Smith", className: "10A", date: "2025-08-18", time: "09:15 AM", status: "Late" },
-  ];
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("teacherName");
+    navigate("/login");
+  };
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-6">Teacher Dashboard</h1>
-
-      {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        {stats.map((stat, index) => (
-          <Card key={index} className="shadow-lg rounded-2xl p-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">{stat.label}</h2>
-              <p className="text-2xl font-bold">{stat.value}</p>
+    <div className="flex min-h-screen bg-gradient-to-r from-indigo-50 to-purple-50">
+      {/* Sidebar */}
+      <div className="w-72 bg-white shadow-lg p-6 flex flex-col justify-between">
+        <div>
+          {/* Teacher Info */}
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
+              <FaChalkboardTeacher className="text-indigo-600 text-xl" />
             </div>
-            <div className="text-blue-600">{stat.icon}</div>
-          </Card>
-        ))}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-700">{teacherName}</h3>
+              <p className="text-sm text-gray-500">Teacher</p>
+            </div>
+          </div>
+
+          {/* Sidebar Navigation */}
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => setActiveTab("students")}
+              className={`flex items-center gap-3 px-4 py-2 rounded-xl font-medium transition ${
+                activeTab === "students"
+                  ? "bg-indigo-600 text-white shadow"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              <FaUsers /> My Students
+            </button>
+            <button
+              onClick={() => setActiveTab("attendance")}
+              className={`flex items-center gap-3 px-4 py-2 rounded-xl font-medium transition ${
+                activeTab === "attendance"
+                  ? "bg-indigo-600 text-white shadow"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              <FaClipboardList /> Class Attendance
+            </button>
+          </div>
+        </div>
+
+        {/* Logout */}
+        <button
+          onClick={handleLogout}
+          className="w-full mt-6 px-5 py-2 rounded-lg bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold shadow hover:opacity-90 transition flex items-center justify-center gap-2"
+        >
+          <FaSignOutAlt /> Logout
+        </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-4 mb-4">
-        <button
-          onClick={() => setActiveTab("students")}
-          className={`px-4 py-2 rounded-xl font-medium ${
-            activeTab === "students" ? "bg-blue-600 text-white" : "bg-gray-200"
-          }`}
-        >
-          My Students
-        </button>
-        <button
-          onClick={() => setActiveTab("attendance")}
-          className={`px-4 py-2 rounded-xl font-medium ${
-            activeTab === "attendance" ? "bg-blue-600 text-white" : "bg-gray-200"
-          }`}
-        >
-          Class Attendance
-        </button>
+      {/* Main Content */}
+      <div className="flex-1 p-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-indigo-700">Teacher Dashboard</h2>
+          <p className="text-sm text-gray-500">Welcome back 👋</p>
+        </div>
+
+        {/* Dynamic Section (Students / Attendance) */}
+        {activeTab === "students" && (
+          <div className="bg-white shadow-lg rounded-2xl p-6 text-gray-500 text-center">
+            <p>No students loaded yet. 📚</p>
+          </div>
+        )}
+
+        {activeTab === "attendance" && (
+          <div className="bg-white shadow-lg rounded-2xl p-6 text-gray-500 text-center">
+            <p>No attendance records available. 📝</p>
+          </div>
+        )}
       </div>
-
-      {/* Students Table */}
-      {activeTab === "students" && (
-        <Card className="shadow-lg rounded-2xl">
-          <CardContent className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="p-3">ID</th>
-                  <th className="p-3">Name</th>
-                  <th className="p-3">Class</th>
-                  <th className="p-3">RFID</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.map((student) => (
-                  <tr key={student.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3">{student.id}</td>
-                    <td className="p-3">{student.name}</td>
-                    <td className="p-3">{student.className}</td>
-                    <td className="p-3">{student.rfid}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Attendance Logs */}
-      {activeTab === "attendance" && (
-        <Card className="shadow-lg rounded-2xl">
-          <CardContent className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="p-3">Date</th>
-                  <th className="p-3">Time</th>
-                  <th className="p-3">Name</th>
-                  <th className="p-3">Class</th>
-                  <th className="p-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {attendanceLogs.map((log) => (
-                  <tr key={log.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3">{log.date}</td>
-                    <td className="p-3">{log.time}</td>
-                    <td className="p-3">{log.name}</td>
-                    <td className="p-3">{log.className}</td>
-                    <td
-                      className={`p-3 font-medium ${
-                        log.status === "Present"
-                          ? "text-green-600"
-                          : log.status === "Late"
-                          ? "text-yellow-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {log.status}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };

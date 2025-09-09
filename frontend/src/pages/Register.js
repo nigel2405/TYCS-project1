@@ -154,18 +154,51 @@ const Register = () => {
                 Class
               </label>
               <select
-                id="className"
-                name="className"
-                value={formData.className}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-                required
-              >
-                <option value="">Select Class</option>
-                <option value="Class A">Class A</option>
-                <option value="Class B">Class B</option>
-                <option value="Class C">Class C</option>
-              </select>
+  id="className"
+  name="className"
+  value={formData.className}
+  onChange={handleChange}
+  className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+  required
+>
+  <option value="">Select Class</option>
+
+  {/* Computer Science */}
+  <option value="FYBSc CS">FYBSc CS</option>
+  <option value="SYBSc CS">SYBSc CS</option>
+  <option value="TYBSc CS">TYBSc CS</option>
+
+  {/* BAF */}
+  <option value="FYBAF">FYBAF</option>
+  <option value="SYBAF">SYBAF</option>
+  <option value="TYBAF">TYBAF</option>
+
+  {/* BMS */}
+  <option value="FYBMS">FYBMS</option>
+  <option value="SYBMS">SYBMS</option>
+  <option value="TYBMS">TYBMS</option>
+
+  {/* Information Technology */}
+  <option value="FYBSc IT">FYBSc IT</option>
+  <option value="SYBSc IT">SYBSc IT</option>
+  <option value="TYBSc IT">TYBSc IT</option>
+
+  {/* Plain Science */}
+  <option value="FYBSc">FYBSc</option>
+  <option value="SYBSc">SYBSc</option>
+  <option value="TYBSc">TYBSc</option>
+
+  {/* Arts */}
+  <option value="FYBA">FYBA</option>
+  <option value="SYBA">SYBA</option>
+  <option value="TYBA">TYBA</option>
+
+  {/* Commerce */}
+  <option value="FYBCom">FYBCom</option>
+  <option value="SYBCom">SYBCom</option>
+  <option value="TYBCom">TYBCom</option>
+</select>
+
             </div>
           )}
 
