@@ -3,17 +3,22 @@ const Attendance = require("../models/Attendance");
 const UnassignedRFID = require("../models/UnassignedRFID");
 
 // ============================
-// Get all students
+// Get all students (with optional class filter)
 // ============================
 exports.getAllStudents = async (req, res) => {
   try {
-    const students = await Student.find().populate("userId", "name email role");
+    const { className } = req.query;
+    const filter = className ? { className } : {};
+
+    const students = await Student.find(filter).populate("userId", "name email role");
+
     res.json(students);
   } catch (error) {
     console.error("❌ Error fetching students:", error);
     res.status(500).json({ message: "Error fetching students", error });
   }
 };
+
 
 // ============================
 // Assign RFID card to student

@@ -4,6 +4,7 @@ import { FaUser, FaIdCard, FaUserCheck, FaClock } from "react-icons/fa";
 import api from "../../services/api";
 import ManageStudents from "./ManageStudents";
 import UnassignedRFIDs from "./UnassignedRFIDs";
+import ClassStudents from "./ClassStudents"; // ✅ New file
 
 // ✅ Fixed AssignTeacher component
 const AssignTeacher = () => {
@@ -120,28 +121,25 @@ const AssignTeacher = () => {
 };
 
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState("students");
+  const [activeTab, setActiveTab] = useState("classes"); // ✅ default is Classes
   const [stats, setStats] = useState({
     students: 0,
     teachers: 0,
     unassignedRFIDs: 0,
     attendanceRate: 0,
   });
-  const [students, setStudents] = useState([]);
 
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const [statsRes, studentsRes, attendanceRes] = await Promise.all([
+        const [statsRes, attendanceRes] = await Promise.all([
           api.get("/admin/dashboard"),
-          api.get("/students"),
           api.get("/attendance/rate"),
         ]);
         setStats({
           ...statsRes.data.stats,
           attendanceRate: attendanceRes.data?.rate || 0,
         });
-        setStudents(studentsRes.data);
       } catch (err) {
         console.error("❌ Error loading dashboard:", err);
       }
@@ -186,9 +184,9 @@ const AdminDashboard = () => {
       <div className="flex justify-center mb-10">
         <div className="grid grid-cols-4 w-full max-w-4xl backdrop-blur-md bg-white/60 border border-gray-200 rounded-full shadow-lg overflow-hidden">
           <TabButton
-            label="Students"
-            active={activeTab === "students"}
-            onClick={() => setActiveTab("students")}
+            label="Classes"
+            active={activeTab === "classes"}
+            onClick={() => setActiveTab("classes")}
           />
           <TabButton
             label="RFID Assignment"
@@ -210,57 +208,17 @@ const AdminDashboard = () => {
 
       {/* Tab Content */}
       <div className="transition-all duration-500 ease-in-out transform">
-        {activeTab === "students" && (
-          <div className="bg-white/80 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-gray-200">
-            {/* Students Table */}
-            <h2 className="text-xl font-bold mb-4 text-gray-800">Students</h2>
-            <div className="overflow-x-auto rounded-xl border border-gray-200">
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-gradient-to-r from-blue-500 to-red-500 text-white">
-                  <tr>
-                    <th className="p-3">Name</th>
-                    <th className="p-3">Email</th>
-                    <th className="p-3">Class</th>
-                    <th className="p-3">RFID Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.map((s) => (
-                    <tr key={s._id} className="border-b hover:bg-gray-100 transition">
-                      <td className="p-3">{s.userId?.name}</td>
-                      <td className="p-3">{s.userId?.email}</td>
-                      <td className="p-3">{s.className}</td>
-                      <td className="p-3">
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                            s.rfidTag
-                              ? "bg-green-100 text-green-600"
-                              : "bg-red-100 text-red-600"
-                          }`}
-                        >
-                          {s.rfidTag ? "Assigned" : "Not Assigned"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
+        {activeTab === "classes" && <ClassStudents />}
         {activeTab === "rfid" && (
           <div className="bg-white/80 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-gray-200">
             <ManageStudents />
           </div>
         )}
-
         {activeTab === "unassigned" && (
           <div className="bg-white/80 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-gray-200">
             <UnassignedRFIDs />
           </div>
         )}
-
         {activeTab === "teachers" && <AssignTeacher />}
       </div>
     </div>

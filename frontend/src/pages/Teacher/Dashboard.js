@@ -1,13 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaChalkboardTeacher, FaUsers, FaClipboardList, FaSignOutAlt } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 const TeacherDashboard = () => {
   const [activeTab, setActiveTab] = useState("students");
+  const [teacherName, setTeacherName] = useState("");
   const navigate = useNavigate();
 
-  // Example: Get teacher name from localStorage
-  const teacherName = localStorage.getItem("teacherName") || "Teacher";
+  useEffect(() => {
+    // ✅ Get teacher name from localStorage after login
+    const storedName = localStorage.getItem("teacherName");
+    if (storedName) {
+      setTeacherName(storedName);
+    }
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -27,7 +33,9 @@ const TeacherDashboard = () => {
               <FaChalkboardTeacher className="text-indigo-600 text-xl" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-700">{teacherName}</h3>
+              <h3 className="text-lg font-semibold text-gray-700">
+                {teacherName || "Teacher"}
+              </h3>
               <p className="text-sm text-gray-500">Teacher</p>
             </div>
           </div>
@@ -71,10 +79,10 @@ const TeacherDashboard = () => {
         {/* Header */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-indigo-700">Teacher Dashboard</h2>
-          <p className="text-sm text-gray-500">Welcome back 👋</p>
+          <p className="text-sm text-gray-500">Welcome back, {teacherName}! 👋</p>
         </div>
 
-        {/* Dynamic Section (Students / Attendance) */}
+        {/* Dynamic Section */}
         {activeTab === "students" && (
           <div className="bg-white shadow-lg rounded-2xl p-6 text-gray-500 text-center">
             <p>No students loaded yet. 📚</p>
