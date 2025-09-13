@@ -1,24 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { FaChalkboardTeacher, FaUsers, FaClipboardList, FaSignOutAlt } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 const TeacherDashboard = () => {
-  const [activeTab, setActiveTab] = useState("students");
-  const [teacherName, setTeacherName] = useState("");
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // ✅ Get teacher name from localStorage after login
-    const storedName = localStorage.getItem("teacherName");
-    if (storedName) {
-      setTeacherName(storedName);
-    }
-  }, []);
+  // Example: Getting teacher name from localStorage (set after login)
+  const teacherName = localStorage.getItem("teacherName") || "Teacher";
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("teacherName");
+    localStorage.removeItem("teacherId");
     navigate("/login");
   };
 
@@ -34,7 +28,7 @@ const TeacherDashboard = () => {
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-700">
-                {teacherName || "Teacher"}
+                {teacherName}
               </h3>
               <p className="text-sm text-gray-500">Teacher</p>
             </div>
@@ -43,22 +37,12 @@ const TeacherDashboard = () => {
           {/* Sidebar Navigation */}
           <div className="flex flex-col gap-3">
             <button
-              onClick={() => setActiveTab("students")}
-              className={`flex items-center gap-3 px-4 py-2 rounded-xl font-medium transition ${
-                activeTab === "students"
-                  ? "bg-indigo-600 text-white shadow"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+              className="flex items-center gap-3 px-4 py-2 rounded-xl font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
             >
               <FaUsers /> My Students
             </button>
             <button
-              onClick={() => setActiveTab("attendance")}
-              className={`flex items-center gap-3 px-4 py-2 rounded-xl font-medium transition ${
-                activeTab === "attendance"
-                  ? "bg-indigo-600 text-white shadow"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+              className="flex items-center gap-3 px-4 py-2 rounded-xl font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
             >
               <FaClipboardList /> Class Attendance
             </button>
@@ -76,24 +60,17 @@ const TeacherDashboard = () => {
 
       {/* Main Content */}
       <div className="flex-1 p-8">
-        {/* Header */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-indigo-700">Teacher Dashboard</h2>
-          <p className="text-sm text-gray-500">Welcome back, {teacherName}! 👋</p>
+          <p className="text-sm text-gray-500">
+            Welcome back, {teacherName}! 👋
+          </p>
         </div>
 
-        {/* Dynamic Section */}
-        {activeTab === "students" && (
-          <div className="bg-white shadow-lg rounded-2xl p-6 text-gray-500 text-center">
-            <p>No students loaded yet. 📚</p>
-          </div>
-        )}
-
-        {activeTab === "attendance" && (
-          <div className="bg-white shadow-lg rounded-2xl p-6 text-gray-500 text-center">
-            <p>No attendance records available. 📝</p>
-          </div>
-        )}
+        {/* Placeholder content */}
+        <div className="bg-white shadow-lg rounded-2xl p-6 text-gray-500 text-center">
+          <p>Select an option from the sidebar to continue. 📚</p>
+        </div>
       </div>
     </div>
   );

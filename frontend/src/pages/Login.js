@@ -32,8 +32,14 @@ const handleSubmit = async (e) => {
     console.log("ROLE FROM BACKEND:", role);
     console.log("NAME FROM BACKEND:", name);
 
-    // ✅ Save student name
-    if (name) localStorage.setItem("studentName", name);
+    // ✅ Save name according to role
+    if (role.toLowerCase() === "student") {
+      localStorage.setItem("studentName", name);
+    } else if (role.toLowerCase() === "teacher") {
+      localStorage.setItem("teacherName", name);
+    } else if (role.toLowerCase() === "admin") {
+      localStorage.setItem("adminName", name);
+    }
 
     // ✅ Save token + role
     login(token, role);
@@ -41,10 +47,10 @@ const handleSubmit = async (e) => {
     // Navigate
     if (role.toLowerCase() === "student") {
       navigate("/student/dashboard");
-    } else if (role === "admin") {
-      navigate("/admin/dashboard");
-    } else if (role === "teacher") {
+    } else if (role.toLowerCase() === "teacher") {
       navigate("/teacher/dashboard");
+    } else if (role.toLowerCase() === "admin") {
+      navigate("/admin/dashboard");
     } else {
       alert("Unknown role. Cannot redirect.");
     }
@@ -53,6 +59,7 @@ const handleSubmit = async (e) => {
     alert("Invalid email or password");
   }
 };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 p-6">

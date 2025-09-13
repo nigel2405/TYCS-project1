@@ -26,9 +26,13 @@ exports.register = async (req, res) => {
         rfidTag: rfidTag || null,
         className: className, // ✅ store class here
       });
-    } else if (role === "teacher") {
-      await Teacher.create({ userId: user._id });
-    } else if (role === "admin") {
+      } else if (role === "teacher") {
+        await Teacher.create({
+          userId: user._id,
+          assignedClasses: req.body.assignedClasses || [], // ✅ Save assigned classes
+        });
+      }
+ else if (role === "admin") {
       await Admin.create({ userId: user._id });
     }
 
