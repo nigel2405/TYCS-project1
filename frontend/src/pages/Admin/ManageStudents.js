@@ -10,6 +10,7 @@ const ManageStudents = ({ onAssignmentComplete }) => {
   const [rfidTag, setRfidTag] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null); // { type: "success" | "error", message: string }
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -77,11 +78,10 @@ const ManageStudents = ({ onAssignmentComplete }) => {
       {/* Status Message */}
       {status && (
         <div
-          className={`flex items-center gap-2 p-3 mb-4 rounded-lg text-sm ${
-            status.type === "success"
+          className={`flex items-center gap-2 p-3 mb-4 rounded-lg text-sm ${status.type === "success"
               ? "bg-green-100 text-green-800 border border-green-300"
               : "bg-red-100 text-red-800 border border-red-300"
-          }`}
+            }`}
         >
           {status.type === "success" ? (
             <CheckCircle2 size={18} />
@@ -94,27 +94,62 @@ const ManageStudents = ({ onAssignmentComplete }) => {
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Student selection */}
+        {/* Student selection with search */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Select Student
           </label>
           <div className="relative">
             <User className="absolute left-3 top-3 text-gray-400" size={18} />
-            <select
-              value={studentId}
-              onChange={(e) => setStudentId(e.target.value)}
+
+            {/* Search input */}
+            <input
+              type="text"
+              placeholder="Type student name, email or class..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
               className="w-full pl-10 border rounded-lg p-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-            >
-              <option value="">-- Choose a Student --</option>
-              {students.map((s) => (
-                <option key={s._id} value={s._id}>
-                  {s.userId?.name} ({s.userId?.email})
-                  {s.className ? ` - ${s.className}` : ""}
-                </option>
-              ))}
-            </select>
+            />
+
+            {/* Dropdown list of results */}
+            {searchTerm && (
+              <ul className="absolute z-10 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-56 overflow-y-auto">
+                {students
+                  .filter(
+                    (s) =>
+                      s.userId?.name.toLowerCase().includes(searchTerm) ||
+                      s.userId?.email.toLowerCase().includes(searchTerm) ||
+                      (s.className || "").toLowerCase().includes(searchTerm)
+                  )
+                  .map((s) => (
+                    <li
+                      key={s._id}
+                      className={`p-2 cursor-pointer hover:bg-blue-100 ${studentId === s._id ? "bg-blue-50" : ""
+                        }`}
+                      onClick={() => {
+                        setStudentId(s._id);
+                        setSearchTerm(s.userId?.name); // show name in input
+                      }}
+                    >
+                      {s.userId?.name} ({s.userId?.email})
+                      {s.className ? ` - ${s.className}` : ""}
+                    </li>
+                  ))}
+                {/* If no match */}
+                {students.filter(
+                  (s) =>
+                    s.userId?.name.toLowerCase().includes(searchTerm) ||
+                    s.userId?.email.toLowerCase().includes(searchTerm) ||
+                    (s.className || "").toLowerCase().includes(searchTerm)
+                ).length === 0 && (
+                    <li className="p-2 text-gray-500">No student found</li>
+                  )}
+              </ul>
+            )}
           </div>
         </div>
+
+
 
         {/* RFID selection */}
         <div>

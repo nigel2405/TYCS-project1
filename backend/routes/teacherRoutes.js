@@ -1,21 +1,44 @@
-// routes/teacherRoutes.js
 const express = require("express");
-const Teacher = require("../models/Teacher");
 const router = express.Router();
-const authMiddleware = require("../middleware/authMiddleware");
+const Assignment = require("../models/Assignment");
+const Student = require("../models/Student");
+const { protect, isTeacher } = require("../middlewares/authMiddleware");
+const teacherController = require("../controllers/teacherController");
 
-router.get("/me", authMiddleware, async (req, res) => {
+// Get all leave applications for teacher's class
+router.get("/leaves", protect, isTeacher, teacherController.getClassLeaves);
+
+// Approve or reject a leave
+router.put("/leave/:id", protect, isTeacher, teacherController.updateLeaveStatus);
+
+
+// GET classes assigned to the logged-in teacher with their students
+router.get("/my-classes", protect, isTeacher, async (req, res) => {
   try {
-    const teacher = await Teacher.findOne({ userId: req.user.userId }).populate("userId", "name email");
-    if (!teacher) return res.status(404).json({ message: "Teacher not found" });
+    // 1️⃣ Find classes assigned to this teacher
+    const assignments = await Assignment.find({ teacherId: req.user._id });
 
-    res.json({
-      name: teacher.userId.name,
-      email: teacher.userId.email,
-      assignedClasses: teacher.assignedClasses,
-    });
+    // 2️⃣ Fetch students for each assigned class by querying Student and populating User fields
+    const classesWithStudents = await Promise.all(
+      assignments.map(async (a) => {
+        const students = await Student.find({ className: a.className })
+          .populate({
+            path: "userId",
+            select: "name email rfid", // select user details fields needed
+          })
+          .exec();
+
+        return {
+          className: a.className,
+          students,
+        };
+      })
+    );
+
+    res.json(classesWithStudents);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
