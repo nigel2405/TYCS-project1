@@ -94,39 +94,10 @@ const TeacherDashboard = () => {
           </div>
 
           {/* Navigation */}
-          <div className="flex flex-col gap-3">
-            <button
-              onClick={() => setActiveTab("classes")}
-              className={`flex items-center gap-3 px-4 py-2 rounded-xl font-medium ${activeTab === "classes"
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-            >
-              <FaChalkboard /> My Classes
-            </button>
-            <button
-              onClick={() => setActiveTab("attendance")}
-              className={`flex items-center gap-3 px-4 py-2 rounded-xl font-medium ${activeTab === "attendance"
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-            >
-              <FaClipboardList /> Class Attendance
-            </button>
-            <button
-              onClick={() => setActiveTab("leaves")}
-              className={`flex items-center gap-3 px-4 py-2 rounded-xl font-medium relative ${activeTab === "leaves"
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-            >
-              <FaBell /> Leave Applications
-              {pendingLeaves > 0 && (
-                <span className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
-                  {pendingLeaves}
-                </span>
-              )}
-            </button>
+          <div className="flex flex-col gap-2">
+            <NavTab label="My Classes" icon={<FaChalkboard />} active={activeTab === 'classes'} onClick={() => setActiveTab('classes')} />
+            <NavTab label="Class Attendance" icon={<FaClipboardList />} active={activeTab === 'attendance'} onClick={() => setActiveTab('attendance')} />
+            <NavTab label="Leave Applications" icon={<FaBell />} active={activeTab === 'leaves'} onClick={() => setActiveTab('leaves')} badge={pendingLeaves} />
           </div>
         </div>
 
@@ -187,9 +158,7 @@ const TeacherDashboard = () => {
 
         {/* Attendance Tab */}
         {activeTab === "attendance" && (
-          <div className="bg-white shadow-lg rounded-2xl p-6 text-gray-500 text-center">
-            <p>Attendance module coming soon. 📊</p>
-          </div>
+          <TeacherAttendanceSection />
         )}
 
         {/* Leave Applications Tab */}
@@ -330,3 +299,146 @@ const TeacherDashboard = () => {
 };
 
 export default TeacherDashboard;
+const NavTab = ({ label, icon, active, onClick, badge }) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center justify-between px-4 py-3 rounded-xl font-medium transition border ${
+      active ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-200'
+    }`}
+  >
+    <span className="flex items-center gap-3">
+      <span className={`text-lg ${active ? 'text-white' : 'text-indigo-600'}`}>{icon}</span>
+      {label}
+    </span>
+    {badge > 0 && (
+      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${active ? 'bg-white text-indigo-700' : 'bg-red-500 text-white'}`}>
+        {badge}
+      </span>
+    )}
+  </button>
+);
+
+const TeacherAttendanceSection = () => {
+  const [month, setMonth] = React.useState(new Date().getMonth() + 1);
+  const [year, setYear] = React.useState(new Date().getFullYear());
+  const [summary, setSummary] = React.useState([]);
+  const [classNames, setClassNames] = React.useState([]);
+  const [selectedClass, setSelectedClass] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const [details, setDetails] = React.useState(null); // modal details
+
+  const fetchSummary = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const token = localStorage.getItem("token");
+      const qs = new URLSearchParams({ month: String(month), year: String(year), ...(selectedClass ? { className: selectedClass } : {}) });
+      const res = await axios.get(`http://localhost:5000/api/teacher/class-attendance?${qs.toString()}` , {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSummary(res.data.summary || []);
+      setClassNames(res.data.classNames || []);
+    } catch (err) {
+      setError("Failed to load class attendance");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [month, year, selectedClass]);
+
+  const pct = (s) => (s.totalDays ? Math.round((s.presentDays / s.totalDays) * 100) : 0);
+
+  const openDetails = async (studentId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const qs = new URLSearchParams({ month: String(month), year: String(year), className: selectedClass || (classNames[0] || '') });
+      const res = await axios.get(`http://localhost:5000/api/teacher/class-attendance/details?${qs.toString()}` , {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const records = res.data.records.filter(r => r.student?._id === studentId);
+      const student = records[0]?.student;
+      setDetails({ student, records });
+    } catch (e) {
+      setError('Failed to load details');
+    }
+  };
+
+  return (
+    <div className="bg-white shadow-lg rounded-2xl p-6">
+      <div className="flex gap-3 mb-4 items-center">
+        <select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)} className="border p-2 rounded">
+          <option value="">All Classes</option>
+          {classNames.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        <select value={month} onChange={(e) => setMonth(parseInt(e.target.value, 10))} className="border p-2 rounded">
+          {[...Array(12)].map((_, i) => (
+            <option key={i+1} value={i+1}>{i+1}</option>
+          ))}
+        </select>
+        <input type="number" value={year} onChange={(e) => setYear(parseInt(e.target.value, 10) || year)} className="border p-2 rounded w-28" />
+      </div>
+
+      {loading && <p>Loading...</p>}
+      {error && <p className="text-red-600">{error}</p>}
+
+      {!loading && summary.length === 0 && <p className="text-gray-500">No records.</p>}
+
+      {summary.length > 0 && (
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b">
+              <th className="py-2">Student</th>
+              <th className="py-2">Email</th>
+              <th className="py-2">Present</th>
+              <th className="py-2">Total</th>
+              <th className="py-2">Rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            {summary.map((s) => (
+              <tr key={s.student?._id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => openDetails(s.student?._id)}>
+                <td className="py-2">{s.student?.userId?.name || "Unknown"}</td>
+                <td className="py-2">{s.student?.userId?.email || ""}</td>
+                <td className="py-2">{s.presentDays}</td>
+                <td className="py-2">{s.totalDays}</td>
+                <td className="py-2 font-semibold">{pct(s)}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {details && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-[600px] max-h-[80vh] overflow-auto relative">
+            <button className="absolute right-3 top-3 text-gray-500" onClick={() => setDetails(null)}>✖</button>
+            <h3 className="text-xl font-bold mb-4 text-indigo-700">{details.student?.userId?.name} - Daily Records</h3>
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="py-2">Date</th>
+                  <th className="py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {details.records.map((r) => (
+                  <tr key={r._id} className="border-b">
+                    <td className="py-2">{new Date(r.date).toLocaleDateString()}</td>
+                    <td className={`py-2 ${r.status === 'present' ? 'text-green-600' : 'text-red-600'}`}>{r.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

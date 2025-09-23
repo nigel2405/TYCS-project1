@@ -85,8 +85,8 @@ exports.logAttendance = async (req, res) => {
 
     const attendance = await Attendance.create({
       student: student._id,
-      timestamp: new Date(),
-      status: "Present"
+      date: new Date(),
+      status: "present"
     });
 
     console.log(`✅ Attendance logged for ${student.userId?.name} (RFID: ${rfidTag})`);

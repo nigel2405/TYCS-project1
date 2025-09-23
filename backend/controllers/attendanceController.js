@@ -5,7 +5,7 @@ exports.getAttendanceRate = async (req, res) => {
     const total = await Attendance.countDocuments();
     if (total === 0) return res.json({ rate: 0 });
 
-    const present = await Attendance.countDocuments({ status: "Present" });
+    const present = await Attendance.countDocuments({ status: "present" });
     const rate = present / total;
 
     res.json({ rate });

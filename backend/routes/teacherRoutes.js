@@ -4,6 +4,7 @@ const Assignment = require("../models/Assignment");
 const Student = require("../models/Student");
 const { protect, isTeacher } = require("../middlewares/authMiddleware");
 const teacherController = require("../controllers/teacherController");
+const Attendance = require("../models/Attendance");
 
 // Get all leave applications for teacher's class
 router.get("/leaves", protect, isTeacher, teacherController.getClassLeaves);
@@ -43,3 +44,85 @@ router.get("/my-classes", protect, isTeacher, async (req, res) => {
 });
 
 module.exports = router;
+
+// Class attendance summary for a month for classes assigned to logged-in teacher
+router.get("/class-attendance", protect, isTeacher, async (req, res) => {
+  try {
+    const { month, year, className } = req.query;
+    const now = new Date();
+    const m = month ? parseInt(month, 10) - 1 : now.getMonth();
+    const y = year ? parseInt(year, 10) : now.getFullYear();
+
+    const start = new Date(y, m, 1);
+    const end = new Date(y, m + 1, 1);
+
+    const assignments = await Assignment.find({ teacherId: req.user._id });
+    let classNames = assignments.map((a) => a.className);
+    if (className) classNames = classNames.filter((c) => c === className);
+
+    const students = await Student.find({ className: { $in: classNames } });
+    const studentIds = students.map((s) => s._id);
+
+    const records = await Attendance.find({
+      student: { $in: studentIds },
+      date: { $gte: start, $lt: end },
+    })
+      .populate({ path: 'student', populate: { path: 'userId', select: 'name email' } })
+      .lean();
+
+    // Build summary by student
+    const byStudent = {};
+    for (const r of records) {
+      const id = r.student._id.toString();
+      if (!byStudent[id]) byStudent[id] = { student: r.student, total: 0, present: 0 };
+      byStudent[id].total += 1;
+      if (r.status === 'present') byStudent[id].present += 1;
+    }
+
+    const summary = Object.values(byStudent).map((s) => ({
+      student: s.student,
+      totalDays: s.total,
+      presentDays: s.present,
+      rate: s.total ? s.present / s.total : 0,
+    }));
+
+    res.json({ month: m + 1, year: y, classNames, summary });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Per-student daily records for a class in a month
+router.get("/class-attendance/details", protect, isTeacher, async (req, res) => {
+  try {
+    const { month, year, className } = req.query;
+    if (!className) return res.status(400).json({ message: 'className is required' });
+
+    const now = new Date();
+    const m = month ? parseInt(month, 10) - 1 : now.getMonth();
+    const y = year ? parseInt(year, 10) : now.getFullYear();
+
+    const start = new Date(y, m, 1);
+    const end = new Date(y, m + 1, 1);
+
+    // Ensure teacher owns this class
+    const assignments = await Assignment.find({ teacherId: req.user._id, className });
+    if (assignments.length === 0) return res.status(403).json({ message: 'Not assigned to this class' });
+
+    const students = await Student.find({ className })
+      .populate({ path: 'userId', select: 'name email' })
+      .lean();
+    const studentIds = students.map(s => s._id);
+
+    const records = await Attendance.find({ student: { $in: studentIds }, date: { $gte: start, $lt: end } })
+      .populate({ path: 'student', populate: { path: 'userId', select: 'name email' } })
+      .sort({ date: 1 })
+      .lean();
+
+    res.json({ month: m + 1, year: y, className, students, records });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
