@@ -7,6 +7,7 @@ import { FaSignInAlt, FaEye, FaEyeSlash } from 'react-icons/fa';
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
+  const portal = process.env.REACT_APP_PORTAL; // 'admin' or 'user'
 
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -44,12 +45,23 @@ const handleSubmit = async (e) => {
     // ✅ Save token + role
     login(token, role);
 
+    // Enforce portal role restrictions
+    const roleLower = role.toLowerCase();
+    if (portal === 'admin' && roleLower !== 'admin') {
+      alert('This portal is for admins only.');
+      return;
+    }
+    if (portal === 'user' && roleLower === 'admin') {
+      alert('This portal is for students and teachers only.');
+      return;
+    }
+
     // Navigate
-    if (role.toLowerCase() === "student") {
+    if (roleLower === "student") {
       navigate("/student/dashboard");
-    } else if (role.toLowerCase() === "teacher") {
+    } else if (roleLower === "teacher") {
       navigate("/teacher/dashboard");
-    } else if (role.toLowerCase() === "admin") {
+    } else if (roleLower === "admin") {
       navigate("/admin/dashboard");
     } else {
       alert("Unknown role. Cannot redirect.");

@@ -20,9 +20,12 @@ import StudentDashboard from '../pages/Student/Dashboard';
 import AttendanceLog from '../pages/Student/AttendanceLog';
 
 const AppRoutes = () => {
+  const portal = process.env.REACT_APP_PORTAL; // 'admin' or 'user'
+
+  const isAdminPortal = portal === 'admin';
+
   return (
     <Routes>
-      {/* Redirect root to Landing Page */}
       <Route path="/" element={<LandingPage />} />
 
       {/* Auth */}
@@ -31,20 +34,22 @@ const AppRoutes = () => {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
-      {/* Admin Routes */}
-      <Route path="/admin/dashboard" element={<AdminDashboard />} />
-      <Route path="/admin/manage-students" element={<ManageStudents />} />
-      <Route path="/admin/unassigned" element={<UnassignedRFIDs />} />
+      {isAdminPortal ? (
+        <>
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/manage-students" element={<ManageStudents />} />
+          <Route path="/admin/unassigned" element={<UnassignedRFIDs />} />
+        </>
+      ) : (
+        <>
+          <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+          <Route path="/teacher/attendance" element={<AttendancePage />} />
 
-      {/* Teacher Routes */}
-      <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
-      <Route path="/teacher/attendance" element={<AttendancePage />} />
+          <Route path="/student/dashboard" element={<StudentDashboard />} />
+          <Route path="/student/logs" element={<AttendanceLog />} />
+        </>
+      )}
 
-      {/* Student Routes */}
-      <Route path="/student/dashboard" element={<StudentDashboard />} />
-      <Route path="/student/logs" element={<AttendanceLog />} />
-
-      {/* Catch-all: Optional 404 or redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
