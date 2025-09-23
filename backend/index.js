@@ -11,6 +11,7 @@ const studentRoutes = require("./routes/studentRoutes");
 const rfidRoutes = require("./routes/rfidRoutes");
 const attendanceRoutes = require("./routes/attendanceRoutes");
 const classAssignmentsRoutes = require("./routes/classAssignments");
+const testRoutes = require("./routes/testRoutes");
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use("/api/students", studentRoutes);
 app.use("/api/rfid", rfidRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/class-assignments", classAssignmentsRoutes);
+app.use("/api/test", testRoutes);
 
 
 // IoT device endpoint (ESP32 will call this)

@@ -5,6 +5,8 @@ import LandingPage from '../pages/Home/LandingPage';
 
 import Login from '../pages/Login';
 import Register from '../pages/Register';
+import ForgotPassword from '../pages/ForgotPassword';
+import ResetPassword from '../pages/ResetPassword';
 
 import AdminDashboard from '../pages/Admin/Dashboard';
 import ManageStudents from '../pages/Admin/ManageStudents';
@@ -26,6 +28,8 @@ const AppRoutes = () => {
       {/* Auth */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Admin Routes */}
       <Route path="/admin/dashboard" element={<AdminDashboard />} />

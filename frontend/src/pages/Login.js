@@ -116,6 +116,12 @@ const handleSubmit = async (e) => {
           </button>
         </div>
 
+        <div className="mt-2 text-center text-sm">
+          <button onClick={() => navigate('/forgot-password')} className="text-blue-600 hover:underline">
+            Forgot password?
+          </button>
+        </div>
+
         <div className="mt-2 text-center">
           <button
             onClick={() => navigate('/')}
