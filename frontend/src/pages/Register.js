@@ -5,7 +5,7 @@ import axios from 'axios';
 
 const Register = () => {
   const navigate = useNavigate();
-  const [accountType, setAccountType] = useState('student');
+  // Student-only registration
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
@@ -24,18 +24,17 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // ✅ Validation: className must be selected if role = student
-    if (accountType === "student" && !formData.className) {
+    // ✅ Student must select class
+    if (!formData.className) {
       alert("Please select a class for student accounts.");
       return;
     }
 
-    console.log("Registering with:", {
+    console.log("Registering student with:", {
       name: formData.username,
       email: formData.email,
       password: formData.password,
-      role: accountType,
-      className: accountType === "student" ? formData.className : undefined,
+      className: formData.className,
     });
 
     try {
@@ -43,8 +42,7 @@ const Register = () => {
         name: formData.username,
         email: formData.email,
         password: formData.password,
-        role: accountType,
-        className: accountType === "student" ? formData.className : undefined,
+        className: formData.className,
       });
 
       alert("Registration successful!");
@@ -65,25 +63,7 @@ const Register = () => {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Account Type */}
-          <div>
-            <label htmlFor="accountType" className="block font-medium mb-1">
-              Account Type
-            </label>
-            <select
-              id="accountType"
-              title="Account Type"
-              value={accountType}
-              onChange={(e) => setAccountType(e.target.value)}
-              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-              required
-            >
-              <option value="">Select Account Type</option>
-              <option value="student">Student</option>
-              <option value="teacher">Teacher</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
+          <div className="text-sm text-gray-600">Registering a <span className="font-semibold">Student</span> account</div>
 
           {/* Username */}
           <div>
@@ -147,8 +127,7 @@ const Register = () => {
             </button>
           </div>
 
-          {/* Class (only for Students) */}
-          {accountType === "student" && (
+          {/* Class */}
             <div>
               <label htmlFor="className" className="block font-medium mb-1">
                 Class
@@ -200,7 +179,6 @@ const Register = () => {
 </select>
 
             </div>
-          )}
 
           {/* Submit */}
           <button

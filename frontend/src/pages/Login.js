@@ -47,12 +47,12 @@ const handleSubmit = async (e) => {
 
     // Enforce portal role restrictions
     const roleLower = role.toLowerCase();
-    if (portal === 'admin' && roleLower !== 'admin') {
-      alert('This portal is for admins only.');
+    if (portal === 'admin' && !(roleLower === 'admin' || roleLower === 'teacher')) {
+      alert('This portal is for teachers and admins only.');
       return;
     }
-    if (portal === 'user' && roleLower === 'admin') {
-      alert('This portal is for students and teachers only.');
+    if (portal === 'user' && roleLower !== 'student') {
+      alert('This portal is for students only.');
       return;
     }
 
@@ -123,9 +123,11 @@ const handleSubmit = async (e) => {
 
         <div className="mt-6 text-center text-sm text-gray-600">
           Don't have an account?{' '}
-          <button onClick={() => navigate('/register')} className="text-blue-600 hover:underline">
-            Sign up
-          </button>
+          {portal === 'admin' ? (
+            <button onClick={() => navigate('/teacher/register')} className="text-blue-600 hover:underline">Sign up as Teacher</button>
+          ) : (
+            <button onClick={() => navigate('/register')} className="text-blue-600 hover:underline">Sign up as Student</button>
+          )}
         </div>
 
         <div className="mt-2 text-center text-sm">
