@@ -4,7 +4,8 @@ import { FaUser, FaIdCard, FaUserCheck, FaClock } from "react-icons/fa";
 import api from "../../services/api";
 import ManageStudents from "./ManageStudents";
 import UnassignedRFIDs from "./UnassignedRFIDs";
-import ClassStudents from "./ClassStudents"; // ✅ New file
+import ClassStudents from "./ClassStudents";
+import Sidebar from "../../components/shared/Sidebar";
 
 // ✅ Fixed AssignTeacher component
 const AssignTeacher = () => {
@@ -121,13 +122,15 @@ const AssignTeacher = () => {
 };
 
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState("classes"); // ✅ default is Classes
+  const [activeTab, setActiveTab] = useState("classes");
   const [stats, setStats] = useState({
     students: 0,
     teachers: 0,
     unassignedRFIDs: 0,
+    assignedRFIDs: 0,
     attendanceRate: 0,
   });
+  const adminName = localStorage.getItem("adminName") || "Admin";
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -148,78 +151,121 @@ const AdminDashboard = () => {
   }, []);
 
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300 min-h-screen">
-      {/* Header */}
-      <header className="flex justify-between items-center mb-10">
-        <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-blue-500 via-red-500 to-gray-700 bg-clip-text text-transparent drop-shadow-lg">
-          Admin Dashboard
-        </h1>
-      </header>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-        <StatCard
-          label="Total Students"
-          value={stats.students}
-          icon={<FaUser className="text-3xl text-blue-500" />}
-        />
-        <StatCard
-          label="Total Teachers"
-          value={stats.teachers}
-          icon={<FaUserCheck className="text-3xl text-green-500" />}
-        />
-        <StatCard
-          label="Unassigned RFID Cards"
-          value={stats.unassignedRFIDs}
-          icon={<FaIdCard className="text-3xl text-red-500" />}
-        />
-        <StatCard
-          label="Avg. Attendance Rate"
-          value={`${Math.round((stats.attendanceRate || 0) * 100)}%`}
-          icon={<FaClock className="text-3xl text-indigo-500" />}
-        />
-      </div>
-
-      {/* Tabs */}
-      <div className="flex justify-center mb-10">
-        <div className="grid grid-cols-4 w-full max-w-4xl backdrop-blur-md bg-white/60 border border-gray-200 rounded-full shadow-lg overflow-hidden">
-          <TabButton
-            label="Classes"
-            active={activeTab === "classes"}
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300">
+      {/* Fixed Sidebar */}
+      <Sidebar userRole="admin" userName={adminName}>
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="bg-blue-50 p-3 rounded-lg text-center">
+            <p className="text-blue-600 text-2xl font-bold">{stats.students}</p>
+            <p className="text-xs text-gray-600">Students</p>
+          </div>
+          <div className="bg-green-50 p-3 rounded-lg text-center">
+            <p className="text-green-600 text-2xl font-bold">{stats.teachers}</p>
+            <p className="text-xs text-gray-600">Teachers</p>
+          </div>
+          <div className="bg-orange-50 p-3 rounded-lg text-center">
+            <p className="text-orange-600 text-2xl font-bold">{stats.assignedRFIDs}</p>
+            <p className="text-xs text-gray-600">RFIDs</p>
+          </div>
+          <div className="bg-purple-50 p-3 rounded-lg text-center">
+            <p className="text-purple-600 text-2xl font-bold">{Math.round((stats.attendanceRate || 0) * 100)}%</p>
+            <p className="text-xs text-gray-600">Attendance</p>
+          </div>
+        </div>
+        
+        {/* Navigation Tabs */}
+        <div className="space-y-2">
+          <button
             onClick={() => setActiveTab("classes")}
-          />
-          <TabButton
-            label="RFID Assignment"
-            active={activeTab === "rfid"}
+            className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+              activeTab === "classes" ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"
+            }`}
+          >
+            Classes
+          </button>
+          <button
             onClick={() => setActiveTab("rfid")}
-          />
-          <TabButton
-            label="Unassigned RFIDs"
-            active={activeTab === "unassigned"}
+            className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+              activeTab === "rfid" ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"
+            }`}
+          >
+            RFID Assignment
+          </button>
+          <button
             onClick={() => setActiveTab("unassigned")}
-          />
-          <TabButton
-            label="Assign Teachers"
-            active={activeTab === "teachers"}
+            className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+              activeTab === "unassigned" ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"
+            }`}
+          >
+            Unassigned RFIDs
+          </button>
+          <button
             onClick={() => setActiveTab("teachers")}
+            className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+              activeTab === "teachers" ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"
+            }`}
+          >
+            Assign Teachers
+          </button>
+        </div>
+      </Sidebar>
+
+      {/* Main Content - with left margin for fixed sidebar */}
+      <div className="ml-72 min-h-screen overflow-y-auto">
+        <div className="p-6">
+          {/* Header */}
+          <header className="mb-10">
+          <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-blue-500 via-red-500 to-gray-700 bg-clip-text text-transparent drop-shadow-lg">
+            Admin Dashboard
+          </h1>
+        </header>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-12">
+          <StatCard
+            label="Total Students"
+            value={stats.students}
+            icon={<FaUser className="text-3xl text-blue-500" />}
+          />
+          <StatCard
+            label="Total Teachers"
+            value={stats.teachers}
+            icon={<FaUserCheck className="text-3xl text-green-500" />}
+          />
+          <StatCard
+            label="Assigned RFID Cards"
+            value={stats.assignedRFIDs}
+            icon={<FaIdCard className="text-3xl text-green-600" />}
+          />
+          <StatCard
+            label="Unassigned RFID Cards"
+            value={stats.unassignedRFIDs}
+            icon={<FaIdCard className="text-3xl text-red-500" />}
+          />
+          <StatCard
+            label="Avg. Attendance Rate"
+            value={`${Math.round((stats.attendanceRate || 0) * 100)}%`}
+            icon={<FaClock className="text-3xl text-indigo-500" />}
           />
         </div>
-      </div>
 
-      {/* Tab Content */}
-      <div className="transition-all duration-500 ease-in-out transform">
-        {activeTab === "classes" && <ClassStudents />}
-        {activeTab === "rfid" && (
-          <div className="bg-white/80 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-gray-200">
-            <ManageStudents />
-          </div>
-        )}
-        {activeTab === "unassigned" && (
-          <div className="bg-white/80 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-gray-200">
-            <UnassignedRFIDs />
-          </div>
-        )}
-        {activeTab === "teachers" && <AssignTeacher />}
+        {/* Tab Content */}
+        <div className="transition-all duration-500 ease-in-out transform">
+          {activeTab === "classes" && <ClassStudents />}
+          {activeTab === "rfid" && (
+            <div className="bg-white/80 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-gray-200">
+              <ManageStudents />
+            </div>
+          )}
+          {activeTab === "unassigned" && (
+            <div className="bg-white/80 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-gray-200">
+              <UnassignedRFIDs />
+            </div>
+          )}
+          {activeTab === "teachers" && <AssignTeacher />}
+        </div>
+        </div>
       </div>
     </div>
   );
@@ -234,19 +280,6 @@ const StatCard = ({ label, value, icon }) => (
     </div>
     <div className="p-3 bg-white rounded-full shadow">{icon}</div>
   </div>
-);
-
-const TabButton = ({ label, active, onClick }) => (
-  <button
-    onClick={onClick}
-    className={`w-full py-3 text-lg font-semibold transition-all duration-500 ${
-      active
-        ? "bg-gradient-to-r from-blue-500 via-purple-500 to-red-500 text-white shadow-lg"
-        : "text-gray-600 hover:bg-gray-100"
-    }`}
-  >
-    {label}
-  </button>
 );
 
 export default AdminDashboard;

@@ -7,6 +7,9 @@ const { protect, isStudent } = require("../middlewares/authMiddleware");
 // Get all students
 router.get("/", studentController.getAllStudents);
 
+// Get student dashboard data
+router.get("/dashboard", protect, isStudent, studentController.getStudentDashboard);
+
 // Assign RFID to student
 router.post("/assign-rfid", studentController.assignRFID);
 

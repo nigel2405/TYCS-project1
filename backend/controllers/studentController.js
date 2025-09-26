@@ -4,6 +4,91 @@ const UnassignedRFID = require("../models/UnassignedRFID");
 const LeaveApplication = require("../models/LeaveApplication");
 
 // ===============================
+// Get student dashboard data
+// ===============================
+exports.getStudentDashboard = async (req, res) => {
+  try {
+    const student = await Student.findOne({ userId: req.user._id }).populate("userId", "name email");
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    // Get current month and year
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const startOfMonth = new Date(currentYear, currentMonth, 1);
+    const endOfMonth = new Date(currentYear, currentMonth + 1, 1);
+
+    // Get attendance records for current month
+    const currentMonthRecords = await Attendance.find({
+      student: student._id,
+      date: { $gte: startOfMonth, $lt: endOfMonth }
+    }).sort({ date: -1 });
+
+    // Get all attendance records for calculating overall stats
+    const allRecords = await Attendance.find({ student: student._id }).sort({ date: -1 }).limit(30);
+
+    // Calculate statistics
+    const totalDaysThisMonth = currentMonthRecords.length;
+    const presentDaysThisMonth = currentMonthRecords.filter(record => record.status === "present").length;
+    const attendanceRateThisMonth = totalDaysThisMonth > 0 ? (presentDaysThisMonth / totalDaysThisMonth) * 100 : 0;
+
+    // Calculate overall stats from last 30 records
+    const totalDaysOverall = allRecords.length;
+    const presentDaysOverall = allRecords.filter(record => record.status === "present").length;
+    const attendanceRateOverall = totalDaysOverall > 0 ? (presentDaysOverall / totalDaysOverall) * 100 : 0;
+
+    // Determine alert status
+    let alertStatus = "Good";
+    let alertColor = "green";
+    if (attendanceRateOverall < 75) {
+      alertStatus = "Low Attendance";
+      alertColor = "red";
+    } else if (attendanceRateOverall < 85) {
+      alertStatus = "Warning";
+      alertColor = "yellow";
+    }
+
+    // Get recent attendance records (last 10)
+    const recentAttendance = allRecords.slice(0, 10).map(record => ({
+      _id: record._id,
+      date: record.date,
+      status: record.status,
+      formattedDate: record.date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      })
+    }));
+
+    res.json({
+      student: {
+        id: student._id,
+        name: student.userId.name,
+        email: student.userId.email,
+        className: student.className,
+        rfidTag: student.rfidTag
+      },
+      stats: {
+        attendanceRate: Math.round(attendanceRateThisMonth),
+        overallAttendanceRate: Math.round(attendanceRateOverall),
+        presentDaysThisMonth,
+        totalDaysThisMonth,
+        presentDaysOverall,
+        totalDaysOverall,
+        alertStatus,
+        alertColor
+      },
+      recentAttendance
+    });
+  } catch (error) {
+    console.error("❌ Error fetching student dashboard:", error);
+    res.status(500).json({ message: "Error fetching dashboard data", error });
+  }
+};
+
+// ===============================
 // Get all students (with optional class filter)
 // ===============================
 exports.getAllStudents = async (req, res) => {

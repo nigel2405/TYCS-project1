@@ -43,8 +43,6 @@ router.get("/my-classes", protect, isTeacher, async (req, res) => {
   }
 });
 
-module.exports = router;
-
 // Class attendance summary for a month for classes assigned to logged-in teacher
 router.get("/class-attendance", protect, isTeacher, async (req, res) => {
   try {
@@ -126,3 +124,43 @@ router.get("/class-attendance/details", protect, isTeacher, async (req, res) => 
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+// Get daily attendance for a specific date and class
+router.get("/class-attendance/daily", protect, isTeacher, async (req, res) => {
+  try {
+    const { date, className } = req.query;
+    if (!className || !date) {
+      return res.status(400).json({ message: 'className and date are required' });
+    }
+
+    // Ensure teacher owns this class
+    const assignments = await Assignment.find({ teacherId: req.user._id, className });
+    if (assignments.length === 0) {
+      return res.status(403).json({ message: 'Not assigned to this class' });
+    }
+
+    const selectedDate = new Date(date);
+    const startOfDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+    const endOfDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + 1);
+
+    const students = await Student.find({ className })
+      .populate({ path: 'userId', select: 'name email' })
+      .lean();
+    const studentIds = students.map(s => s._id);
+
+    const records = await Attendance.find({ 
+      student: { $in: studentIds }, 
+      date: { $gte: startOfDay, $lt: endOfDay } 
+    })
+      .populate({ path: 'student', populate: { path: 'userId', select: 'name email' } })
+      .sort({ 'student.userId.name': 1 })
+      .lean();
+
+    res.json({ date, className, records });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+module.exports = router;

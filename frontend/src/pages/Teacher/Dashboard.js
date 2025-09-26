@@ -3,11 +3,11 @@ import {
   FaChalkboardTeacher,
   FaChalkboard,
   FaClipboardList,
-  FaSignOutAlt,
   FaBell,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import axios from "../../services/api";
+import Sidebar from "../../components/shared/Sidebar";
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
@@ -25,7 +25,7 @@ const TeacherDashboard = () => {
       try {
         const token = localStorage.getItem("token");
         const res = await axios.get(
-          "http://localhost:5000/api/teacher/my-classes",
+          "/teacher/my-classes",
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -44,7 +44,7 @@ const TeacherDashboard = () => {
       try {
         const token = localStorage.getItem("token");
         const res = await axios.get(
-          "http://localhost:5000/api/teacher/leaves",
+          "/teacher/leaves",
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -61,19 +61,11 @@ const TeacherDashboard = () => {
     setExpandedClasses((prev) => ({ ...prev, [name]: !prev[name] }));
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    localStorage.removeItem("teacherName");
-    localStorage.removeItem("teacherId");
-    navigate("/login");
-  };
-
   const handleLeaveAction = async (leaveId, status) => {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `http://localhost:5000/api/teacher/leave/${leaveId}`,
+        `/teacher/leave/${leaveId}`,
         { status },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -90,57 +82,37 @@ const TeacherDashboard = () => {
   ).length;
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-r from-indigo-100 via-purple-50 to-indigo-50">
-      {/* Sidebar */}
-      <div className="w-72 bg-white shadow-xl p-6 flex flex-col justify-between rounded-r-3xl">
-        <div>
-          {/* Teacher Info */}
-          <div className="flex items-center gap-3 mb-10">
-            <div className="w-14 h-14 rounded-full bg-indigo-100 flex items-center justify-center">
-              <FaChalkboardTeacher className="text-indigo-600 text-2xl" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-gray-700">{teacherName}</h3>
-              <p className="text-sm text-gray-500">Teacher</p>
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <div className="flex flex-col gap-3">
-            <NavTab
-              label="My Classes"
-              icon={<FaChalkboard />}
-              active={activeTab === "classes"}
-              onClick={() => setActiveTab("classes")}
-            />
-            <NavTab
-              label="Class Attendance"
-              icon={<FaClipboardList />}
-              active={activeTab === "attendance"}
-              onClick={() => setActiveTab("attendance")}
-            />
-            <NavTab
-              label="Leave Applications"
-              icon={<FaBell />}
-              active={activeTab === "leaves"}
-              onClick={() => setActiveTab("leaves")}
-              badge={pendingLeaves}
-            />
-          </div>
+    <div className="min-h-screen bg-gradient-to-r from-indigo-100 via-purple-50 to-indigo-50">
+      {/* Fixed Sidebar */}
+      <Sidebar userRole="teacher" userName={teacherName}>
+        {/* Navigation */}
+        <div className="flex flex-col gap-3">
+          <NavTab
+            label="My Classes"
+            icon={<FaChalkboard />}
+            active={activeTab === "classes"}
+            onClick={() => setActiveTab("classes")}
+          />
+          <NavTab
+            label="Class Attendance"
+            icon={<FaClipboardList />}
+            active={activeTab === "attendance"}
+            onClick={() => setActiveTab("attendance")}
+          />
+          <NavTab
+            label="Leave Applications"
+            icon={<FaBell />}
+            active={activeTab === "leaves"}
+            onClick={() => setActiveTab("leaves")}
+            badge={pendingLeaves}
+          />
         </div>
+      </Sidebar>
 
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          className="w-full mt-6 px-5 py-2 rounded-xl bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold shadow-md hover:opacity-90 transition flex items-center justify-center gap-2"
-        >
-          <FaSignOutAlt /> Logout
-        </button>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 p-10">
-        <div className="mb-10">
+      {/* Main Content - with left margin for fixed sidebar */}
+      <div className="ml-72 min-h-screen overflow-y-auto">
+        <div className="p-10">
+          <div className="mb-10">
           <h2 className="text-3xl font-bold text-indigo-700">
             Teacher Dashboard
           </h2>
@@ -273,6 +245,7 @@ const TeacherDashboard = () => {
             onAction={handleLeaveAction}
           />
         )}
+        </div>
       </div>
     </div>
   );
@@ -383,201 +356,447 @@ const LeaveApplicationModal = ({ leave, onClose, onAction }) => (
   </div>
 );
 
-// ------------------- Attendance Section -------------------
+// ------------------- Enhanced Attendance Section -------------------
 const TeacherAttendanceSection = () => {
-  const [month, setMonth] = React.useState(new Date().getMonth() + 1);
-  const [year, setYear] = React.useState(new Date().getFullYear());
-  const [summary, setSummary] = React.useState([]);
-  const [classNames, setClassNames] = React.useState([]);
-  const [selectedClass, setSelectedClass] = React.useState("");
+  const [viewMode, setViewMode] = React.useState('monthly'); // 'daily', 'monthly'
+  const [selectedDate, setSelectedDate] = React.useState(new Date().toISOString().split('T')[0]);
+  const [selectedClass, setSelectedClass] = React.useState('');
+  const [classes, setClasses] = React.useState([]);
+  const [attendanceData, setAttendanceData] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState("");
-  const [details, setDetails] = React.useState(null);
+  const [error, setError] = React.useState('');
+  const [studentDetails, setStudentDetails] = React.useState(null);
 
-  const fetchSummary = async () => {
+  // Fetch teacher's classes
+  React.useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get('http://localhost:5000/api/teacher/my-classes', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setClasses(res.data || []);
+        if (res.data?.length > 0) {
+          setSelectedClass(res.data[0].className);
+        }
+      } catch (err) {
+        console.error('Error fetching classes:', err);
+      }
+    };
+    fetchClasses();
+  }, []);
+
+  const fetchAttendanceData = async () => {
+    if (!selectedClass) return;
+    
     try {
       setLoading(true);
-      setError("");
-      const token = localStorage.getItem("token");
-      const qs = new URLSearchParams({
-        month: String(month),
-        year: String(year),
-        ...(selectedClass ? { className: selectedClass } : {}),
-      });
-      const res = await axios.get(
-        `http://localhost:5000/api/teacher/class-attendance?${qs.toString()}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      setSummary(res.data.summary || []);
-      setClassNames(res.data.classNames || []);
+      setError('');
+      const token = localStorage.getItem('token');
+      
+      if (viewMode === 'daily') {
+        // Use the dedicated daily endpoint for better performance
+        const res = await axios.get(
+          `http://localhost:5000/api/teacher/class-attendance/daily?date=${selectedDate}&className=${selectedClass}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        setAttendanceData(res.data.records || []);
+      } else {
+        // Monthly view
+        const date = new Date(selectedDate);
+        const month = date.getMonth() + 1;
+        const year = date.getFullYear();
+        
+        const res = await axios.get(
+          `http://localhost:5000/api/teacher/class-attendance?month=${month}&year=${year}&className=${selectedClass}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        setAttendanceData(res.data.summary || []);
+      }
     } catch (err) {
-      setError("Failed to load class attendance");
+      setError('Failed to load attendance data');
+      console.error('Error fetching attendance:', err);
     } finally {
       setLoading(false);
     }
   };
 
   React.useEffect(() => {
-    fetchSummary();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month, year, selectedClass]);
+    if (selectedClass) {
+      fetchAttendanceData();
+    }
+  }, [viewMode, selectedDate, selectedClass]);
 
-  const pct = (s) =>
-    s.totalDays ? Math.round((s.presentDays / s.totalDays) * 100) : 0;
+  const getAttendanceRate = (present, total) => {
+    return total > 0 ? Math.round((present / total) * 100) : 0;
+  };
 
-  const openDetails = async (studentId) => {
+  const openStudentDetails = async (studentId) => {
     try {
-      const token = localStorage.getItem("token");
-      const qs = new URLSearchParams({
-        month: String(month),
-        year: String(year),
-        className: selectedClass || classNames[0] || "",
-      });
+      const token = localStorage.getItem('token');
+      const date = new Date(selectedDate);
+      const month = date.getMonth() + 1;
+      const year = date.getFullYear();
+      
       const res = await axios.get(
-        `http://localhost:5000/api/teacher/class-attendance/details?${qs.toString()}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        `http://localhost:5000/api/teacher/class-attendance/details?month=${month}&year=${year}&className=${selectedClass}`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      const records = res.data.records.filter(
-        (r) => r.student?._id === studentId
-      );
-      const student = records[0]?.student;
-      setDetails({ student, records });
-    } catch (e) {
-      setError("Failed to load details");
+      
+      const studentRecords = res.data.records.filter(r => r.student?._id === studentId);
+      const student = studentRecords[0]?.student;
+      setStudentDetails({ student, records: studentRecords });
+    } catch (err) {
+      setError('Failed to load student details');
     }
   };
 
   return (
-    <div className="bg-white shadow-xl rounded-2xl p-8 border">
-      {/* Filters */}
-      <div className="flex gap-3 mb-6 items-center">
-        <select
-          value={selectedClass}
-          onChange={(e) => setSelectedClass(e.target.value)}
-          className="border p-2 rounded-lg"
-        >
-          <option value="">All Classes</option>
-          {classNames.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-        <select
-          value={month}
-          onChange={(e) => setMonth(parseInt(e.target.value, 10))}
-          className="border p-2 rounded-lg"
-        >
-          {[...Array(12)].map((_, i) => (
-            <option key={i + 1} value={i + 1}>
-              {i + 1}
-            </option>
-          ))}
-        </select>
-        <input
-          type="number"
-          value={year}
-          onChange={(e) =>
-            setYear(parseInt(e.target.value, 10) || year)
-          }
-          className="border p-2 rounded-lg w-28"
-        />
+    <div className="space-y-6">
+      {/* Header with Controls */}
+      <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 rounded-3xl p-8 text-white">
+        <h2 className="text-3xl font-bold mb-6 text-center">📊 Class Attendance Management</h2>
+        
+        {/* Control Panel */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          {/* Class Selection */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-purple-100">Select Class</label>
+            <select
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value)}
+              className="w-full p-3 rounded-xl bg-white/20 backdrop-blur-sm text-white placeholder-purple-200 border border-white/30 focus:border-white focus:ring-2 focus:ring-white/50 outline-none"
+            >
+              <option value="" className="text-gray-800">Choose a class...</option>
+              {classes.map((cls) => (
+                <option key={cls.className} value={cls.className} className="text-gray-800">
+                  {cls.className}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          {/* View Mode */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-purple-100">View Mode</label>
+            <select
+              value={viewMode}
+              onChange={(e) => setViewMode(e.target.value)}
+              className="w-full p-3 rounded-xl bg-white/20 backdrop-blur-sm text-white border border-white/30 focus:border-white focus:ring-2 focus:ring-white/50 outline-none"
+            >
+              <option value="daily" className="text-gray-800">📅 Daily View</option>
+              <option value="monthly" className="text-gray-800">📊 Monthly Summary</option>
+            </select>
+          </div>
+          
+          {/* Date Selection */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-purple-100">
+              {viewMode === 'daily' ? 'Select Date' : 'Select Month'}
+            </label>
+            <input
+              type={viewMode === 'daily' ? 'date' : 'month'}
+              value={viewMode === 'daily' ? selectedDate : selectedDate.slice(0, 7)}
+              onChange={(e) => {
+                if (viewMode === 'daily') {
+                  setSelectedDate(e.target.value);
+                } else {
+                  setSelectedDate(e.target.value + '-01');
+                }
+              }}
+              className="w-full p-3 rounded-xl bg-white/20 backdrop-blur-sm text-white border border-white/30 focus:border-white focus:ring-2 focus:ring-white/50 outline-none"
+            />
+          </div>
+          
+          {/* Quick Actions */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-purple-100">Quick Access</label>
+            <button
+              onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+              className="w-full p-3 rounded-xl bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all duration-200 text-white font-medium border border-white/30"
+            >
+              📍 Today
+            </button>
+          </div>
+        </div>
       </div>
 
-      {loading && <p className="text-indigo-600">Loading...</p>}
-      {error && <p className="text-red-600">{error}</p>}
-      {!loading && summary.length === 0 && (
-        <p className="text-gray-500">No records.</p>
+      {/* Loading and Error States */}
+      {loading && (
+        <div className="text-center py-12">
+          <div className="inline-flex items-center px-6 py-3 rounded-full bg-indigo-100 text-indigo-700">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-700 mr-3"></div>
+            Loading attendance data...
+          </div>
+        </div>
+      )}
+      
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-xl">
+          <div className="flex">
+            <div className="ml-3">
+              <p className="text-red-700 font-medium">⚠️ {error}</p>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* Attendance Summary Table */}
-      {summary.length > 0 && (
+      {/* Attendance Display */}
+      {!loading && !error && selectedClass && (
+        <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+          {viewMode === 'daily' ? (
+            <DailyAttendanceView 
+              attendanceData={attendanceData}
+              selectedDate={selectedDate}
+              selectedClass={selectedClass}
+            />
+          ) : (
+            <MonthlyAttendanceView 
+              attendanceData={attendanceData}
+              selectedDate={selectedDate}
+              selectedClass={selectedClass}
+              getAttendanceRate={getAttendanceRate}
+              openStudentDetails={openStudentDetails}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Student Details Modal */}
+      {studentDetails && (
+        <StudentDetailsModal 
+          studentDetails={studentDetails}
+          onClose={() => setStudentDetails(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+// Daily Attendance View Component
+const DailyAttendanceView = ({ attendanceData, selectedDate, selectedClass }) => {
+  const presentCount = attendanceData.filter(record => record.status === 'present').length;
+  const totalCount = attendanceData.length;
+  const attendanceRate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
+
+  return (
+    <div className="p-8">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-2xl font-bold text-gray-800">
+          📅 Daily Attendance - {selectedClass}
+        </h3>
+        <div className="text-right">
+          <p className="text-sm text-gray-500">{new Date(selectedDate).toLocaleDateString('en-US', { 
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+          })}</p>
+          <p className="text-lg font-semibold text-indigo-600">
+            {presentCount}/{totalCount} Present ({attendanceRate}%)
+          </p>
+        </div>
+      </div>
+
+      {attendanceData.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">📋</div>
+          <p className="text-gray-500 text-lg">No attendance records found for this date.</p>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {attendanceData.map((record, index) => (
+            <div
+              key={record._id || index}
+              className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all duration-200 ${
+                record.status === 'present'
+                  ? 'bg-green-50 border-green-200 hover:bg-green-100'
+                  : 'bg-red-50 border-red-200 hover:bg-red-100'
+              }`}
+            >
+              <div className="flex items-center space-x-4">
+                <div className={`w-4 h-4 rounded-full ${
+                  record.status === 'present' ? 'bg-green-500' : 'bg-red-500'
+                }`}></div>
+                <div>
+                  <p className="font-semibold text-gray-800">
+                    {record.student?.userId?.name || 'Unknown Student'}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {record.student?.userId?.email || 'No email'}
+                  </p>
+                </div>
+              </div>
+              <div className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                record.status === 'present'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-red-500 text-white'
+              }`}>
+                {record.status === 'present' ? '✅ Present' : '❌ Absent'}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Monthly Attendance View Component
+const MonthlyAttendanceView = ({ attendanceData, selectedDate, selectedClass, getAttendanceRate, openStudentDetails }) => {
+  const monthName = new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  return (
+    <div className="p-8">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-2xl font-bold text-gray-800">
+          📊 Monthly Summary - {selectedClass}
+        </h3>
+        <p className="text-lg font-semibold text-indigo-600">{monthName}</p>
+      </div>
+
+      {attendanceData.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">📊</div>
+          <p className="text-gray-500 text-lg">No attendance data available for this month.</p>
+        </div>
+      ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm border-collapse">
+          <table className="w-full">
             <thead>
-              <tr className="border-b bg-indigo-50 text-indigo-700">
-                <th className="py-3 px-4">Student</th>
-                <th className="py-3 px-4">Email</th>
-                <th className="py-3 px-4">Present</th>
-                <th className="py-3 px-4">Total</th>
-                <th className="py-3 px-4">Rate</th>
+              <tr className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
+                <th className="text-left py-4 px-6 rounded-l-xl font-semibold">Student</th>
+                <th className="text-left py-4 px-4 font-semibold">Email</th>
+                <th className="text-center py-4 px-4 font-semibold">Present Days</th>
+                <th className="text-center py-4 px-4 font-semibold">Total Days</th>
+                <th className="text-center py-4 px-6 rounded-r-xl font-semibold">Attendance Rate</th>
               </tr>
             </thead>
             <tbody>
-              {summary.map((s) => (
-                <tr
-                  key={s.student?._id}
-                  className="border-b hover:bg-indigo-50 cursor-pointer"
-                  onClick={() => openDetails(s.student?._id)}
-                >
-                  <td className="py-2 px-4 font-medium text-gray-700">
-                    {s.student?.userId?.name || "Unknown"}
-                  </td>
-                  <td className="py-2 px-4 text-gray-500">
-                    {s.student?.userId?.email || ""}
-                  </td>
-                  <td className="py-2 px-4">{s.presentDays}</td>
-                  <td className="py-2 px-4">{s.totalDays}</td>
-                  <td
-                    className={`py-2 px-4 font-semibold ${
-                      pct(s) >= 75 ? "text-green-600" : "text-red-600"
-                    }`}
+              {attendanceData.map((student, index) => {
+                const rate = getAttendanceRate(student.presentDays, student.totalDays);
+                return (
+                  <tr
+                    key={student.student?._id || index}
+                    onClick={() => openStudentDetails(student.student?._id)}
+                    className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 cursor-pointer transition-all duration-200"
                   >
-                    {pct(s)}%
-                  </td>
-                </tr>
-              ))}
+                    <td className="py-4 px-6 font-medium text-gray-800">
+                      {student.student?.userId?.name || 'Unknown Student'}
+                    </td>
+                    <td className="py-4 px-4 text-gray-600">
+                      {student.student?.userId?.email || 'No email'}
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full font-semibold">
+                        {student.presentDays}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-semibold">
+                        {student.totalDays}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6 text-center">
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className={`w-16 h-3 rounded-full overflow-hidden ${
+                          rate >= 75 ? 'bg-green-200' : rate >= 50 ? 'bg-yellow-200' : 'bg-red-200'
+                        }`}>
+                          <div 
+                            className={`h-full transition-all duration-500 ${
+                              rate >= 75 ? 'bg-green-500' : rate >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${rate}%` }}
+                          ></div>
+                        </div>
+                        <span className={`font-bold text-sm ${
+                          rate >= 75 ? 'text-green-600' : rate >= 50 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {rate}%
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
+    </div>
+  );
+};
 
-      {/* Details Modal */}
-      {details && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 w-[600px] max-h-[80vh] overflow-auto relative">
+// Student Details Modal Component
+const StudentDetailsModal = ({ studentDetails, onClose }) => {
+  const { student, records } = studentDetails;
+  const presentDays = records.filter(r => r.status === 'present').length;
+  const totalDays = records.length;
+  const attendanceRate = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-2xl font-bold">{student?.userId?.name}</h3>
+              <p className="text-indigo-100">{student?.userId?.email}</p>
+              <div className="flex items-center space-x-4 mt-2">
+                <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
+                  📊 {presentDays}/{totalDays} Days
+                </span>
+                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                  attendanceRate >= 75 ? 'bg-green-500' : attendanceRate >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                }`}>
+                  {attendanceRate}% Attendance
+                </span>
+              </div>
+            </div>
             <button
-              className="absolute right-4 top-4 text-gray-500 hover:text-black"
-              onClick={() => setDetails(null)}
+              onClick={onClose}
+              className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
             >
-              ✖
+              ✕
             </button>
-            <h3 className="text-xl font-bold mb-4 text-indigo-700">
-              {details.student?.userId?.name} - Daily Records
-            </h3>
-            <table className="w-full text-left text-sm border-collapse">
-              <thead>
-                <tr className="border-b bg-indigo-50 text-indigo-700">
-                  <th className="py-2 px-4">Date</th>
-                  <th className="py-2 px-4">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {details.records.map((r) => (
-                  <tr key={r._id} className="border-b">
-                    <td className="py-2 px-4">
-                      {new Date(r.date).toLocaleDateString()}
-                    </td>
-                    <td
-                      className={`py-2 px-4 font-semibold ${
-                        r.status === "present"
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {r.status}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </div>
-      )}
+
+        {/* Content */}
+        <div className="p-6 max-h-[60vh] overflow-y-auto">
+          <h4 className="text-lg font-semibold text-gray-800 mb-4">📅 Daily Attendance Records</h4>
+          
+          {records.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">No attendance records found.</p>
+          ) : (
+            <div className="grid gap-2">
+              {records.map((record) => (
+                <div
+                  key={record._id}
+                  className={`flex items-center justify-between p-3 rounded-xl border-l-4 ${
+                    record.status === 'present'
+                      ? 'bg-green-50 border-green-400'
+                      : 'bg-red-50 border-red-400'
+                  }`}
+                >
+                  <span className="font-medium text-gray-700">
+                    {new Date(record.date).toLocaleDateString('en-US', {
+                      weekday: 'long', month: 'short', day: 'numeric'
+                    })}
+                  </span>
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                    record.status === 'present'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-red-500 text-white'
+                  }`}>
+                    {record.status === 'present' ? '✅ Present' : '❌ Absent'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

@@ -17,7 +17,10 @@ const app = express();
 
 // Allow all origins (for testing) or whitelist ESP32 IP later
 app.use(cors());
-app.use(express.json());
+
+// Increase payload size limit for profile pictures (50MB)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Database connection
 mongoose.connect(process.env.MONGO_URI)

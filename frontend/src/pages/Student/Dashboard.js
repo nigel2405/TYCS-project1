@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { FaCalendarAlt, FaBell, FaUser, FaPaperPlane, FaSignOutAlt, FaRegListAlt, FaClipboardCheck } from "react-icons/fa"; // Added FaSignOutAlt, FaRegListAlt, FaClipboardCheck for potential future use or better icons
+import { FaCalendarAlt, FaBell, FaPaperPlane, FaRegListAlt, FaClipboardCheck } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import axios from "../../services/api";
+import Sidebar from "../../components/shared/Sidebar";
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -11,6 +12,21 @@ const StudentDashboard = () => {
   const [leaveDate, setLeaveDate] = useState("");
   const [application, setApplication] = useState("");
   const [leaves, setLeaves] = useState([]);
+  const [dashboardData, setDashboardData] = useState({
+    student: null,
+    stats: {
+      attendanceRate: 0,
+      overallAttendanceRate: 0,
+      presentDaysThisMonth: 0,
+      totalDaysThisMonth: 0,
+      presentDaysOverall: 0,
+      totalDaysOverall: 0,
+      alertStatus: "Good",
+      alertColor: "green"
+    },
+    recentAttendance: []
+  });
+  const [loading, setLoading] = useState(true);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -22,7 +38,7 @@ const StudentDashboard = () => {
   const fetchLeaves = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:5000/api/students/leaves", {
+      const res = await axios.get("/students/leaves", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setLeaves(res.data);
@@ -35,7 +51,26 @@ const StudentDashboard = () => {
     }
   };
 
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const res = await axios.get("/students/dashboard", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDashboardData(res.data);
+    } catch (err) {
+      console.error("❌ Error fetching dashboard data:", err);
+      if (err.response && err.response.status === 401) {
+        handleLogout();
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
+    fetchDashboardData();
     fetchLeaves();
   }, []);
 
@@ -46,7 +81,19 @@ const StudentDashboard = () => {
         month: 'long',
         day: 'numeric'
     });
-    return `To,\nThe Class Teacher,\n\nRespected Sir/Madam,\n\nI, ${studentName}, would like to request leave on ${displayDate} due to ${leaveReason}.\n\nKindly grant me leave for the mentioned date.\n\nThank you.\n\nYours sincerely,\n${studentName}`;
+    return `To,
+The Class Teacher,
+
+Respected Sir/Madam,
+
+I, ${studentName}, would like to request leave on ${displayDate} due to ${leaveReason}.
+
+Kindly grant me leave for the mentioned date.
+
+Thank you.
+
+Yours sincerely,
+${studentName}`;
   };
 
   const handleSendLeave = async () => {
@@ -61,7 +108,7 @@ const StudentDashboard = () => {
       const token = localStorage.getItem("token");
 
       await axios.post(
-        "http://localhost:5000/api/students/leave",
+        "/students/leave",
         {
           date: leaveDate,
           reason: leaveReason,
@@ -76,6 +123,7 @@ const StudentDashboard = () => {
       setApplication(appText); // Set application preview after sending
 
       fetchLeaves(); // Refresh leave list after submission
+      fetchDashboardData(); // Refresh dashboard data
     } catch (err) {
       console.error("Error sending leave request:", err.response?.data || err);
       alert(err.response?.data?.message || "Failed to send leave request. Please try again.");
@@ -83,70 +131,61 @@ const StudentDashboard = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 font-sans">
-      {/* Sidebar */}
-      <div className="w-72 bg-white shadow-xl p-6 flex flex-col justify-between rounded-r-3xl">
-        <div>
-          {/* Student Info */}
-          <div className="flex items-center gap-4 mb-10 pb-4 border-b border-gray-100">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-200 to-purple-200 flex items-center justify-center shadow-md">
-              <FaUser className="text-indigo-700 text-2xl" />
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 font-sans">
+      {/* Fixed Sidebar */}
+      <Sidebar userRole="student" userName={studentName}>
+        {/* Attendance & Alert Cards */}
+        <div className="space-y-5">
+          {/* Attendance Rate */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-100 shadow-md rounded-xl p-5 border-l-4 border-blue-500 transform hover:scale-105 transition-transform duration-200 ease-in-out">
+            <div className="flex justify-between items-center mb-2">
+              <p className="font-semibold text-gray-700">Attendance Rate</p>
+              <FaCalendarAlt className="text-blue-600 text-xl" />
             </div>
-            <div>
-              <h3 className="text-xl font-bold text-gray-800">{studentName}</h3>
-              <p className="text-sm text-gray-500">Student</p>
-            </div>
+            <p className="text-3xl font-extrabold text-blue-800">
+              {loading ? "--" : `${dashboardData.stats.attendanceRate}%`}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">This month</p>
           </div>
 
-          {/* Attendance & Alert Cards */}
-          <div className="space-y-5">
-            {/* Attendance Rate */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-100 shadow-md rounded-xl p-5 border-l-4 border-blue-500 transform hover:scale-105 transition-transform duration-200 ease-in-out">
-              <div className="flex justify-between items-center mb-2">
-                <p className="font-semibold text-gray-700">Attendance Rate</p>
-                <FaCalendarAlt className="text-blue-600 text-xl" />
-              </div>
-              <p className="text-3xl font-extrabold text-blue-800">--%</p>
-              <p className="text-xs text-gray-500 mt-1">This month</p>
+          {/* Days Present */}
+          <div className="bg-gradient-to-br from-green-50 to-emerald-100 shadow-md rounded-xl p-5 border-l-4 border-green-500 transform hover:scale-105 transition-transform duration-200 ease-in-out">
+            <div className="flex justify-between items-center mb-2">
+              <p className="font-semibold text-gray-700">Days Present</p>
+              <FaClipboardCheck className="text-green-600 text-xl" />
             </div>
+            <p className="text-3xl font-extrabold text-green-800">
+              {loading ? "--" : dashboardData.stats.presentDaysOverall}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Out of {loading ? "--" : dashboardData.stats.totalDaysOverall} days
+            </p>
+          </div>
 
-            {/* Days Present */}
-            <div className="bg-gradient-to-br from-green-50 to-emerald-100 shadow-md rounded-xl p-5 border-l-4 border-green-500 transform hover:scale-105 transition-transform duration-200 ease-in-out">
-              <div className="flex justify-between items-center mb-2">
-                <p className="font-semibold text-gray-700">Days Present</p>
-                <FaClipboardCheck className="text-green-600 text-xl" /> {/* Changed icon for variety */}
-              </div>
-              <p className="text-3xl font-extrabold text-green-800">--</p>
-              <p className="text-xs text-gray-500 mt-1">Out of -- days</p>
+          {/* Alert Status */}
+          <div className="bg-gradient-to-br from-yellow-50 to-amber-100 shadow-md rounded-xl p-5 border-l-4 border-yellow-500 transform hover:scale-105 transition-transform duration-200 ease-in-out">
+            <div className="flex justify-between items-center mb-2">
+              <p className="font-semibold text-gray-700">Alert Status</p>
+              <FaBell className="text-yellow-600 text-xl animate-pulse" />
             </div>
-
-            {/* Alert Status */}
-            <div className="bg-gradient-to-br from-yellow-50 to-amber-100 shadow-md rounded-xl p-5 border-l-4 border-yellow-500 transform hover:scale-105 transition-transform duration-200 ease-in-out">
-              <div className="flex justify-between items-center mb-2">
-                <p className="font-semibold text-gray-700">Alert Status</p>
-                <FaBell className="text-yellow-600 text-xl animate-pulse" />
-              </div>
-              <span className="inline-block bg-yellow-200 text-yellow-800 px-4 py-1 rounded-full text-sm font-bold shadow-sm">
-                --
-              </span>
-              <p className="text-xs text-gray-500 mt-1">Attendance level</p>
-            </div>
+            <span className={`inline-block px-4 py-1 rounded-full text-sm font-bold shadow-sm ${
+              loading ? "bg-gray-200 text-gray-800" :
+              dashboardData.stats.alertColor === "green" ? "bg-green-200 text-green-800" :
+              dashboardData.stats.alertColor === "yellow" ? "bg-yellow-200 text-yellow-800" :
+              "bg-red-200 text-red-800"
+            }`}>
+              {loading ? "--" : dashboardData.stats.alertStatus}
+            </span>
+            <p className="text-xs text-gray-500 mt-1">Attendance level</p>
           </div>
         </div>
+      </Sidebar>
 
-        {/* Logout Button */}
-        <button
-          onClick={handleLogout}
-          className="w-full mt-8 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white font-bold shadow-lg hover:from-red-600 hover:to-rose-700 transition-all duration-300 flex items-center justify-center gap-3 text-lg"
-        >
-          <FaSignOutAlt /> Logout
-        </button>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 p-10 overflow-auto">
-        {/* Header */}
-        <div className="mb-10 pb-4 border-b border-gray-200">
+      {/* Main Content - with left margin for fixed sidebar */}
+      <div className="ml-72 min-h-screen overflow-y-auto">
+        <div className="p-10">
+          {/* Header */}
+          <div className="mb-10 pb-4 border-b border-gray-200">
           <h2 className="text-4xl font-extrabold text-indigo-800">Student Dashboard</h2>
           <p className="text-lg text-gray-600 mt-2">
             Welcome back, <span className="font-semibold text-purple-700">{studentName}</span> 👋
@@ -159,13 +198,57 @@ const StudentDashboard = () => {
             <FaRegListAlt className="text-purple-500" /> Recent Attendance
           </h3>
           <p className="text-md text-gray-600 mb-6">
-            Your latest attendance records will appear here.
+            Your latest attendance records (last 10 days).
           </p>
 
-          <div className="bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-xl text-center text-gray-500 border border-gray-200 shadow-inner">
-            <p className="text-xl font-medium">📅 No attendance records yet</p>
-            <p className="text-sm mt-2">Check back soon for updates!</p>
-          </div>
+          {loading ? (
+            <div className="bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-xl text-center text-gray-500 border border-gray-200 shadow-inner">
+              <p className="text-xl font-medium">📅 Loading attendance records...</p>
+            </div>
+          ) : dashboardData.recentAttendance.length === 0 ? (
+            <div className="bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-xl text-center text-gray-500 border border-gray-200 shadow-inner">
+              <p className="text-xl font-medium">📅 No attendance records yet</p>
+              <p className="text-sm mt-2">Check back soon for updates!</p>
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {dashboardData.recentAttendance.map((record, index) => (
+                <div
+                  key={record._id || index}
+                  className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all duration-200 ${
+                    record.status === 'present'
+                      ? 'bg-green-50 border-green-200 hover:bg-green-100'
+                      : 'bg-red-50 border-red-200 hover:bg-red-100'
+                  }`}
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className={`w-4 h-4 rounded-full ${
+                      record.status === 'present' ? 'bg-green-500' : 'bg-red-500'
+                    }`}></div>
+                    <div>
+                      <p className="font-semibold text-gray-800">
+                        {record.formattedDate}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {new Date(record.date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                    record.status === 'present'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-red-500 text-white'
+                  }`}>
+                    {record.status === 'present' ? '✅ Present' : '❌ Absent'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Leave Application */}
@@ -270,6 +353,7 @@ const StudentDashboard = () => {
                 </table>
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>

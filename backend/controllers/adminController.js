@@ -10,6 +10,7 @@ exports.getDashboard = async (req, res) => {
     const totalStudents = await Student.countDocuments();
     const totalTeachers = await Teacher.countDocuments();
     const unassignedCount = await UnassignedRFID.countDocuments();
+    const assignedRFIDs = await Student.countDocuments({ rfidTag: { $ne: null } });
 
     res.json({
       message: "Admin Dashboard",
@@ -17,6 +18,7 @@ exports.getDashboard = async (req, res) => {
         students: totalStudents,
         teachers: totalTeachers,
         unassignedRFIDs: unassignedCount,
+        assignedRFIDs: assignedRFIDs,
       },
     });
   } catch (error) {
