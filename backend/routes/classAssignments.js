@@ -42,4 +42,21 @@ router.post("/assign", async (req, res) => {
   }
 });
 
+// Remove teacher assignment from class
+router.delete("/remove/:className", async (req, res) => {
+  const { className } = req.params;
+
+  try {
+    const assignment = await Assignment.findOneAndDelete({ className });
+    
+    if (!assignment) {
+      return res.status(404).json({ error: "Assignment not found" });
+    }
+
+    res.json({ message: "Teacher assignment removed successfully", className });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

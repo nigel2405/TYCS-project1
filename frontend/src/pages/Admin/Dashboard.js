@@ -36,9 +36,27 @@ const AssignTeacher = () => {
         ...prev.filter((a) => a.className !== className),
         res.data.assignment,
       ]);
+      setClassName("");
+      setTeacherId("");
+      alert("Teacher assigned successfully!");
     } catch (err) {
       console.error("❌ Error assigning teacher:", err);
       alert("Failed to assign teacher");
+    }
+  };
+
+  const handleRemoveAssignment = async (classNameToRemove) => {
+    if (!window.confirm(`Are you sure you want to remove the teacher assignment for ${classNameToRemove}?`)) {
+      return;
+    }
+    
+    try {
+      await api.delete(`/class-assignments/remove/${encodeURIComponent(classNameToRemove)}`);
+      setAssignments((prev) => prev.filter((a) => a.className !== classNameToRemove));
+      alert("Teacher assignment removed successfully!");
+    } catch (err) {
+      console.error("❌ Error removing assignment:", err);
+      alert("Failed to remove assignment");
     }
   };
 
@@ -105,15 +123,33 @@ const AssignTeacher = () => {
             <tr>
               <th className="p-3">Class</th>
               <th className="p-3">Assigned Teacher</th>
+              <th className="p-3">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {assignments.map((a) => (
-              <tr key={a._id} className="border-b hover:bg-gray-100 transition">
-                <td className="p-3">{a.className}</td>
-                <td className="p-3">{a.teacherId?.name || "Unassigned"}</td>
+            {assignments.length === 0 ? (
+              <tr>
+                <td colSpan="3" className="p-6 text-center text-gray-500">
+                  No teacher assignments found
+                </td>
               </tr>
-            ))}
+            ) : (
+              assignments.map((a) => (
+                <tr key={a._id} className="border-b hover:bg-gray-100 transition">
+                  <td className="p-3">{a.className}</td>
+                  <td className="p-3">{a.teacherId?.name || "Unassigned"}</td>
+                  <td className="p-3">
+                    <button
+                      onClick={() => handleRemoveAssignment(a.className)}
+                      className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition text-sm"
+                      title="Remove teacher assignment"
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

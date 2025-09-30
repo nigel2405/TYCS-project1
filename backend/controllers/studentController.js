@@ -223,6 +223,54 @@ exports.submitLeaveApplication = async (req, res) => {
 };
 
 // ===============================
+// Remove RFID assignment from student
+// ===============================
+exports.removeRFIDAssignment = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    if (!studentId) {
+      return res.status(400).json({ message: "Student ID is required" });
+    }
+
+    const student = await Student.findById(studentId).populate("userId", "name email");
+
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    if (!student.rfidTag) {
+      return res.status(400).json({ message: "Student has no RFID assignment to remove" });
+    }
+
+    const rfidTag = student.rfidTag;
+
+    // Remove RFID from student
+    student.rfidTag = null;
+    await student.save();
+
+    // Add RFID back to unassigned list
+    await UnassignedRFID.create({ uid: rfidTag });
+
+    console.log(`✅ RFID [${rfidTag}] removed from student: ${student.userId?.name}`);
+
+    res.json({
+      message: "RFID assignment removed successfully",
+      student: {
+        id: student._id,
+        name: student.userId?.name,
+        email: student.userId?.email,
+        className: student.className
+      },
+      removedRfidTag: rfidTag
+    });
+  } catch (error) {
+    console.error("❌ Error removing RFID assignment:", error);
+    res.status(500).json({ message: "Error removing RFID assignment", error });
+  }
+};
+
+// ===============================
 // Get all leave applications of logged-in student
 // ===============================
 exports.getStudentLeaves = async (req, res) => {

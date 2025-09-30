@@ -15,6 +15,18 @@ const studentSchema = new mongoose.Schema(
       type: String,
       required: true, // ✅ belongs only to students
     },
+    parentEmail: {
+      type: String,
+      default: null,
+    },
+    parentName: {
+      type: String,
+      default: null,
+    },
+    parentPhone: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true }
 );

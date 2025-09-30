@@ -7,7 +7,7 @@ const ClassStudents = () => {
   const [expandedClasses, setExpandedClasses] = useState({}); // Track expanded/collapsed classes
 
   // Fetch all students and group by class
-  useEffect(() => {
+  const fetchStudents = () => {
     axios
       .get("http://localhost:5000/api/students")
       .then((res) => {
@@ -20,7 +20,28 @@ const ClassStudents = () => {
         setClassStudents(grouped);
       })
       .catch((err) => console.error("Error fetching students:", err));
+  };
+
+  useEffect(() => {
+    fetchStudents();
   }, []);
+
+  // Handle RFID removal
+  const handleRemoveRFID = async (studentId, studentName, rfidTag) => {
+    if (!window.confirm(`Are you sure you want to remove RFID assignment from ${studentName}?`)) {
+      return;
+    }
+
+    try {
+      await axios.delete(`http://localhost:5000/api/students/remove-rfid/${studentId}`);
+      alert(`RFID removed from ${studentName} successfully!`);
+      // Refresh the student list
+      fetchStudents();
+    } catch (err) {
+      console.error("Error removing RFID:", err);
+      alert("Failed to remove RFID assignment");
+    }
+  };
 
   // Toggle expand/collapse
   const toggleClass = (cls) => {
@@ -71,9 +92,24 @@ const ClassStudents = () => {
                         {student.userId?.email || student.email || "No email"}
                       </p>
                     </div>
-                    <span className="text-sm font-semibold text-indigo-600">
-                      {student.rfidTag ? `RFID: ${student.rfidTag}` : "No RFID"}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-indigo-600">
+                        {student.rfidTag ? `RFID: ${student.rfidTag}` : "No RFID"}
+                      </span>
+                      {student.rfidTag && (
+                        <button
+                          onClick={() => handleRemoveRFID(
+                            student._id, 
+                            student.userId?.name || student.name || "Unnamed", 
+                            student.rfidTag
+                          )}
+                          className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600 transition"
+                          title="Remove RFID assignment"
+                        >
+                          Remove RFID
+                        </button>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>

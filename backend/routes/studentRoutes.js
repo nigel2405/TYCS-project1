@@ -33,4 +33,7 @@ router.get("/classes", async (req, res) => {
   }
 });
 
+// Remove RFID assignment from student
+router.delete("/remove-rfid/:studentId", studentController.removeRFIDAssignment);
+
 module.exports = router;

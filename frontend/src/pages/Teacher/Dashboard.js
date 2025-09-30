@@ -4,6 +4,8 @@ import {
   FaChalkboard,
   FaClipboardList,
   FaBell,
+  FaExclamationTriangle,
+  FaEnvelope,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import axios from "../../services/api";
@@ -23,13 +25,7 @@ const TeacherDashboard = () => {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get(
-          "/teacher/my-classes",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const res = await axios.get("/teacher/my-classes");
         setClasses(res.data || []);
       } catch (err) {
         console.error("Error fetching classes:", err);
@@ -42,13 +38,7 @@ const TeacherDashboard = () => {
   useEffect(() => {
     const fetchLeaves = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get(
-          "/teacher/leaves",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const res = await axios.get("/teacher/leaves");
         setLeaveApplications(res.data || []);
       } catch (err) {
         console.error("Error fetching leave applications:", err);
@@ -63,12 +53,7 @@ const TeacherDashboard = () => {
 
   const handleLeaveAction = async (leaveId, status) => {
     try {
-      const token = localStorage.getItem("token");
-      await axios.put(
-        `/teacher/leave/${leaveId}`,
-        { status },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await axios.put(`/teacher/leave/${leaveId}`, { status });
       setLeaveApplications((prev) =>
         prev.map((l) => (l._id === leaveId ? { ...l, status } : l))
       );
@@ -98,6 +83,12 @@ const TeacherDashboard = () => {
             icon={<FaClipboardList />}
             active={activeTab === "attendance"}
             onClick={() => setActiveTab("attendance")}
+          />
+          <NavTab
+            label="Blacklist"
+            icon={<FaExclamationTriangle />}
+            active={activeTab === "blacklist"}
+            onClick={() => setActiveTab("blacklist")}
           />
           <NavTab
             label="Leave Applications"
@@ -175,6 +166,9 @@ const TeacherDashboard = () => {
 
         {/* Attendance Tab */}
         {activeTab === "attendance" && <TeacherAttendanceSection />}
+
+        {/* Blacklist Tab */}
+        {activeTab === "blacklist" && <BlacklistSection />}
 
         {/* Leave Applications Tab */}
         {activeTab === "leaves" && (
@@ -797,6 +791,532 @@ const StudentDetailsModal = ({ studentDetails, onClose }) => {
           )}
         </div>
       </div>
+    </div>
+  );
+};
+
+// ------------------- Blacklist Section -------------------
+const BlacklistSection = () => {
+  const [classes, setClasses] = useState([]);
+  const [blacklistData, setBlacklistData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [sendingEmail, setSendingEmail] = useState({});
+  const [bulkSending, setBulkSending] = useState(false);
+  const [emailHistory, setEmailHistory] = useState([]);
+  const [showEmailHistory, setShowEmailHistory] = useState(false);
+  const [showReports, setShowReports] = useState(false);
+
+  // Fetch teacher's classes
+  const fetchClasses = async () => {
+    try {
+      const res = await axios.get('/teacher/my-classes');
+      setClasses(res.data || []);
+    } catch (err) {
+      console.error('Error fetching classes:', err);
+      setError('Failed to load classes');
+    }
+  };
+
+  // Fetch blacklist data (students with <75% attendance)
+  const fetchBlacklistData = async () => {
+    if (classes.length === 0) return;
+    
+    try {
+      setLoading(true);
+      setError('');
+      
+      const res = await axios.get('/teacher/blacklist');
+      setBlacklistData(res.data.blacklistData || []);
+    } catch (err) {
+      console.error('Error fetching blacklist:', err);
+      if (err.response?.status === 403) {
+        setError('Access denied. Please ensure you are logged in as a teacher.');
+      } else if (err.response?.status === 401) {
+        setError('Session expired. Please log in again.');
+      } else {
+        setError('Failed to load blacklist data. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchClasses();
+  }, []);
+
+  // Fetch blacklist data when classes change
+  useEffect(() => {
+    fetchBlacklistData();
+  }, [classes]);
+
+  const sendNotificationEmail = async (student, className) => {
+    const studentKey = `${student._id}_${className}`;
+    setSendingEmail(prev => ({ ...prev, [studentKey]: true }));
+    
+    try {
+      console.log('📧 Sending notification:', {
+        studentId: student._id,
+        className: className,
+        studentEmail: student.userId?.email,
+        studentName: student.userId?.name
+      });
+      
+      // Using axios instance from api.js which automatically includes auth token
+      const response = await axios.post('/teacher/send-attendance-notification', {
+        studentId: student._id,
+        className: className,
+        studentEmail: student.userId?.email,
+        studentName: student.userId?.name
+      });
+      
+      console.log('✅ Email sent successfully:', response.data);
+      alert(`Notification sent successfully to ${student.userId?.name}!`);
+    } catch (err) {
+      console.error('❌ Error sending notification:', err);
+      console.error('Error details:', {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message
+      });
+      
+      let errorMessage = 'Failed to send notification. ';
+      if (err.response?.status === 403) {
+        errorMessage += 'Access denied. Please ensure you are logged in as a teacher.';
+      } else if (err.response?.status === 401) {
+        errorMessage += 'Session expired. Please log in again.';
+      } else if (err.response?.status === 400) {
+        errorMessage += `Invalid data: ${err.response?.data?.message || 'Please check the student information.'}`;
+      } else if (err.response?.status === 409) {
+        errorMessage += `Duplicate email: ${err.response?.data?.message || 'Email already sent recently.'}`;
+      } else if (err.response?.status === 500) {
+        errorMessage += `Server error: ${err.response?.data?.message || 'Please try again later.'}`;
+      } else {
+        errorMessage += 'Please check your internet connection and try again.';
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setSendingEmail(prev => ({ ...prev, [studentKey]: false }));
+    }
+  };
+
+  const sendBulkNotifications = async (className) => {
+    setBulkSending(true);
+    
+    try {
+      console.log('📧 Sending bulk notifications for class:', className);
+      
+      const response = await axios.post('/teacher/send-bulk-notifications', {
+        className: className,
+        skipDuplicateCheck: false,
+        includeParents: false
+      });
+      
+      console.log('✅ Bulk notifications completed:', response.data);
+      
+      const { sent, skipped, failed, totalStudents } = response.data;
+      
+      let message = `Bulk notification completed for ${className}:\n`;
+      message += `Total students: ${totalStudents}\n`;
+      message += `Sent: ${sent}\n`;
+      message += `Skipped: ${skipped}\n`;
+      message += `Failed: ${failed}`;
+      
+      alert(message);
+      
+      // Refresh blacklist data
+      fetchBlacklistData();
+    } catch (err) {
+      console.error('❌ Error sending bulk notifications:', err);
+      
+      let errorMessage = 'Failed to send bulk notifications. ';
+      if (err.response?.status === 403) {
+        errorMessage += 'Access denied.';
+      } else if (err.response?.status === 401) {
+        errorMessage += 'Session expired. Please log in again.';
+      } else if (err.response?.data?.message) {
+        errorMessage += err.response.data.message;
+      } else {
+        errorMessage += 'Please try again later.';
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setBulkSending(false);
+    }
+  };
+
+  const fetchEmailHistory = async () => {
+    try {
+      const response = await axios.get('/teacher/email-history', {
+        params: { limit: 20 }
+      });
+      setEmailHistory(response.data.emailHistory || []);
+      setShowEmailHistory(true);
+    } catch (err) {
+      console.error('Error fetching email history:', err);
+      alert('Failed to fetch email history.');
+    }
+  };
+
+  const generateReport = async (className, format = 'json') => {
+    try {
+      const response = await axios.get('/teacher/attendance-report', {
+        params: { className, format },
+        responseType: format === 'csv' ? 'blob' : 'json'
+      });
+      
+      if (format === 'csv') {
+        // Download CSV file
+        const blob = new Blob([response.data], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `attendance-report-${className}-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        alert('Report downloaded successfully!');
+      } else {
+        // Show JSON report in modal or new tab
+        const reportWindow = window.open();
+        reportWindow.document.write(`
+          <html>
+            <head><title>Attendance Report - ${className}</title></head>
+            <body>
+              <h1>Attendance Report - ${className}</h1>
+              <pre>${JSON.stringify(response.data, null, 2)}</pre>
+            </body>
+          </html>
+        `);
+      }
+    } catch (err) {
+      console.error('Error generating report:', err);
+      alert('Failed to generate report.');
+    }
+  };
+
+  const getAttendanceColor = (rate) => {
+    if (rate >= 50) return 'text-yellow-600 bg-yellow-100';
+    return 'text-red-600 bg-red-100';
+  };
+
+  const getAttendanceIcon = (rate) => {
+    if (rate >= 50) return '⚠️';
+    return '🚨';
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-red-600 via-orange-600 to-yellow-600 rounded-3xl p-8 text-white">
+        <h2 className="text-3xl font-bold mb-4 text-center flex items-center justify-center gap-3">
+          <FaExclamationTriangle className="text-4xl" />
+          Attendance Blacklist
+        </h2>
+        <p className="text-center text-red-100 text-lg mb-6">
+          Students with attendance below 75% - Requires immediate attention
+        </p>
+        
+        {/* Control Panel */}
+        <div className="flex flex-wrap justify-center gap-4 mt-6">
+          <button
+            onClick={fetchEmailHistory}
+            className="flex items-center space-x-2 px-6 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl transition-all duration-200 font-semibold"
+          >
+            <FaBell className="text-lg" />
+            <span>Email History</span>
+          </button>
+          
+          <button
+            onClick={() => setShowReports(true)}
+            className="flex items-center space-x-2 px-6 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl transition-all duration-200 font-semibold"
+          >
+            <FaClipboardList className="text-lg" />
+            <span>Generate Reports</span>
+          </button>
+          
+          <button
+            onClick={() => fetchBlacklistData()}
+            className="flex items-center space-x-2 px-6 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl transition-all duration-200 font-semibold"
+          >
+            <span>🔄</span>
+            <span>Refresh Data</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Loading and Error States */}
+      {loading && (
+        <div className="text-center py-12">
+          <div className="inline-flex items-center px-6 py-3 rounded-full bg-orange-100 text-orange-700">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-orange-700 mr-3"></div>
+            Loading blacklist data...
+          </div>
+        </div>
+      )}
+      
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-xl">
+          <div className="flex">
+            <div className="ml-3">
+              <p className="text-red-700 font-medium">⚠️ {error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Blacklist Display */}
+      {!loading && !error && (
+        <div className="space-y-6">
+          {blacklistData.length === 0 ? (
+            <div className="bg-green-50 border border-green-200 rounded-3xl p-8 text-center">
+              <div className="text-6xl mb-4">🎉</div>
+              <h3 className="text-2xl font-bold text-green-800 mb-2">Great News!</h3>
+              <p className="text-green-700 text-lg">
+                All students in your classes have attendance above 75%.
+              </p>
+            </div>
+          ) : (
+            blacklistData.map((classData) => (
+              <div key={classData.className} className="bg-white rounded-3xl shadow-xl overflow-hidden border-l-4 border-red-500">
+                {/* Class Header */}
+                <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-2xl font-bold">{classData.className}</h3>
+                      <p className="text-red-100">
+                        {classData.students.length} student{classData.students.length > 1 ? 's' : ''} below 75% attendance
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-4xl">
+                        🚨
+                      </div>
+                      <div className="flex flex-col space-y-2">
+                        <button
+                          onClick={() => sendBulkNotifications(classData.className)}
+                          disabled={bulkSending}
+                          className="flex items-center space-x-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {bulkSending ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              <span>Sending...</span>
+                            </>
+                          ) : (
+                            <>
+                              <FaEnvelope className="text-sm" />
+                              <span>Send to All</span>
+                            </>
+                          )}
+                        </button>
+                        
+                        <button
+                          onClick={() => generateReport(classData.className, 'csv')}
+                          className="flex items-center space-x-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg transition-all duration-200 font-semibold text-sm"
+                        >
+                          <FaClipboardList className="text-sm" />
+                          <span>CSV Report</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Students List */}
+                <div className="p-6">
+                  <div className="grid gap-4">
+                    {classData.students.map((studentData, studentIndex) => {
+                      const student = studentData.student; // Extract student from the data structure
+                      const studentKey = `${student._id}_${classData.className}`;
+                      const attendanceRate = Math.round((studentData.presentDays / studentData.totalDays) * 100);
+                      
+                      return (
+                        <div
+                          key={`${classData.className}-student-${student._id}-${studentIndex}`}
+                          className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-xl p-4 hover:shadow-lg transition-all duration-200"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                              <div className="text-2xl">
+                                {getAttendanceIcon(attendanceRate)}
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-gray-800 text-lg">
+                                  {student.userId?.name || 'Unknown Student'}
+                                </h4>
+                                <p className="text-gray-600">
+                                  {student.userId?.email || 'No email'}
+                                </p>
+                                <div className="flex items-center space-x-2 mt-1">
+                                  <span className="text-sm text-gray-500">
+                                    Present: {studentData.presentDays}/{studentData.totalDays} days
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center space-x-4">
+                              {/* Attendance Rate Badge */}
+                              <div className={`px-4 py-2 rounded-full font-bold text-sm ${getAttendanceColor(attendanceRate)}`}>
+                                {attendanceRate}%
+                              </div>
+                              
+                              {/* Send Email Button */}
+                              <button
+                                onClick={() => sendNotificationEmail(student, classData.className)}
+                                disabled={sendingEmail[studentKey] || !student.userId?.email}
+                                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
+                              >
+                                {sendingEmail[studentKey] ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    <span>Sending...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <FaEnvelope className="text-sm" />
+                                    <span>Send Notification</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Email History Modal */}
+      {showEmailHistory && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold flex items-center gap-3">
+                  <FaBell className="text-2xl" />
+                  Email History
+                </h3>
+                <button
+                  onClick={() => setShowEmailHistory(false)}
+                  className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 max-h-[60vh] overflow-y-auto">
+              {emailHistory.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">No email history found.</p>
+              ) : (
+                <div className="space-y-4">
+                  {emailHistory.map((email, index) => (
+                    <div key={index} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h4 className="font-semibold text-gray-800">
+                            {email.studentId?.userId?.name || 'Unknown Student'}
+                          </h4>
+                          <p className="text-sm text-gray-600">{email.recipientEmail}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            email.status === 'sent' ? 'bg-green-100 text-green-800' :
+                            email.status === 'failed' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {email.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center text-sm text-gray-500">
+                        <span>{email.className} - {email.emailType}</span>
+                        <span>{new Date(email.sentAt).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Reports Modal */}
+      {showReports && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
+            <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold flex items-center gap-3">
+                  <FaClipboardList className="text-2xl" />
+                  Generate Reports
+                </h3>
+                <button
+                  onClick={() => setShowReports(false)}
+                  className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <div className="space-y-6">
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Select Class for Report</h4>
+                  <div className="grid gap-3">
+                    {blacklistData.map(classData => (
+                      <div key={classData.className} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <h5 className="font-semibold text-gray-800">{classData.className}</h5>
+                            <p className="text-sm text-gray-600">
+                              {classData.students.length} students below 75% attendance
+                            </p>
+                          </div>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => {
+                                generateReport(classData.className, 'json');
+                                setShowReports(false);
+                              }}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                            >
+                              View Report
+                            </button>
+                            <button
+                              onClick={() => {
+                                generateReport(classData.className, 'csv');
+                                setShowReports(false);
+                              }}
+                              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                            >
+                              Download CSV
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

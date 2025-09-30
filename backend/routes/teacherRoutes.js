@@ -12,6 +12,21 @@ router.get("/leaves", protect, isTeacher, teacherController.getClassLeaves);
 // Approve or reject a leave
 router.put("/leave/:id", protect, isTeacher, teacherController.updateLeaveStatus);
 
+// Get blacklist data (students with <75% attendance)
+router.get("/blacklist", protect, isTeacher, teacherController.getBlacklistData);
+
+// Send attendance notification email
+router.post("/send-attendance-notification", protect, isTeacher, teacherController.sendAttendanceNotification);
+
+// Send bulk notifications to all students with low attendance
+router.post("/send-bulk-notifications", protect, isTeacher, teacherController.sendBulkNotifications);
+
+// Get email history
+router.get("/email-history", protect, isTeacher, teacherController.getEmailHistory);
+
+// Generate attendance report
+router.get("/attendance-report", protect, isTeacher, teacherController.generateAttendanceReport);
+
 
 // GET classes assigned to the logged-in teacher with their students
 router.get("/my-classes", protect, isTeacher, async (req, res) => {
