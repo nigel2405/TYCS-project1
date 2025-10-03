@@ -69,11 +69,38 @@ exports.login = async (req, res) => {
       return res.json({ token, role: "admin", name: adminUser.name || "Admin" });
     }
 
-    // standard users
-    const user = await User.findOne({ email });
-    if (!user) return res.status(401).json({ message: "Invalid credentials" });
+    // standard users - case-insensitive email lookup
+    const user = await User.findOne({ 
+      email: { $regex: new RegExp(`^${email.trim()}$`, 'i') } 
+    });
+    if (!user) {
+      console.log("❌ Login failed: User not found for email:", email);
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+    
+    console.log("🔍 Login attempt for user:", user.email);
+    console.log("🔍 User ID:", user._id);
+    console.log("🔍 Stored password hash:", user.password?.substring(0, 20) + "...");
+    console.log("🔍 Password length:", password?.length);
+    console.log("🔍 User last updated:", user.updatedAt);
+    
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(401).json({ message: "Invalid credentials" });
+    console.log("🔍 Password match result:", match);
+    
+    if (!match) {
+      // Additional debugging for failed password match
+      console.log("🔍 Attempting to compare:");
+      console.log("  - Input password length:", password?.length);
+      console.log("  - Stored hash starts with:", user.password?.substring(0, 7));
+      console.log("  - Hash algorithm appears to be:", user.password?.substring(0, 4));
+    }
+    
+    if (!match) {
+      console.log("❌ Login failed: Password mismatch for user:", user.email);
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+    
+    console.log("✅ Login successful for user:", user.email);
     const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1d" });
     return res.json({ token, role: user.role, name: user.name || "" });
   } catch (err) {
@@ -88,8 +115,11 @@ exports.forgotPassword = async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ message: "Email is required" });
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ 
+      email: { $regex: new RegExp(`^${email.trim()}$`, 'i') } 
+    });
     if (!user) {
+      console.log("❌ User not found for email:", email);
       // Do not reveal whether email exists
       return res.json({ message: "If that email exists, a reset link was sent" });
     }
@@ -163,27 +193,90 @@ exports.forgotPassword = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
+    console.log("🔄 Password reset attempt with token:", token?.substring(0, 8) + "...");
+    
     if (!token || !password) {
       return res.status(400).json({ message: "Token and new password are required" });
     }
 
+    // Find user with valid token
     const user = await User.findOne({
       resetPasswordToken: token,
       resetPasswordExpires: { $gt: new Date() },
     });
 
-    if (!user) return res.status(400).json({ message: "Invalid or expired token" });
+    if (!user) {
+      console.log("❌ No user found with valid token");
+      // Check if token exists but is expired
+      const expiredUser = await User.findOne({ resetPasswordToken: token });
+      if (expiredUser) {
+        console.log("❌ Token found but expired for user:", expiredUser.email);
+        return res.status(400).json({ message: "Reset token has expired. Please request a new reset link." });
+      }
+      return res.status(400).json({ message: "Invalid reset token. Please request a new reset link." });
+    }
 
-    const hashed = await bcrypt.hash(password, 10);
-    user.password = hashed;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
-    await user.save();
+    console.log("✅ User found for password reset:", user.email);
+    console.log("🔍 User ID:", user._id);
+    console.log("🔍 Old password hash:", user.password?.substring(0, 20) + "...");
 
-    res.json({ message: "Password has been reset successfully" });
+    // Hash the new password
+    const saltRounds = 12; // Increased salt rounds for better security
+    const hashed = await bcrypt.hash(password, saltRounds);
+    console.log("🔍 New password hash:", hashed?.substring(0, 20) + "...");
+
+    // Use findByIdAndUpdate for atomic operation
+    const updatedUser = await User.findByIdAndUpdate(
+      user._id,
+      {
+        $set: {
+          password: hashed
+        },
+        $unset: {
+          resetPasswordToken: 1,
+          resetPasswordExpires: 1
+        }
+      },
+      { 
+        new: true,
+        runValidators: true
+      }
+    );
+
+    if (!updatedUser) {
+      console.log("❌ Failed to update user");
+      return res.status(500).json({ message: "Failed to update password. Please try again." });
+    }
+
+    console.log("✅ Password updated successfully using findByIdAndUpdate");
+
+    // Double-check: Verify the password was actually saved correctly
+    const verifyUser = await User.findById(user._id);
+    if (!verifyUser) {
+      console.log("❌ User not found after update");
+      return res.status(500).json({ message: "Error verifying password update" });
+    }
+
+    const passwordMatches = await bcrypt.compare(password, verifyUser.password);
+    console.log("🔍 Password verification after save:", passwordMatches);
+    console.log("🔍 Reset token cleared:", !verifyUser.resetPasswordToken);
+    console.log("🔍 Reset expires cleared:", !verifyUser.resetPasswordExpires);
+
+    if (!passwordMatches) {
+      console.log("❌ Password verification failed after save");
+      return res.status(500).json({ message: "Password update verification failed. Please try again." });
+    }
+
+    // Log successful reset
+    console.log("✅ Password reset completed successfully for user:", user.email);
+
+    res.json({ 
+      message: "Password has been reset successfully",
+      success: true
+    });
   } catch (err) {
     console.error("❌ Reset password error:", err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error. Please try again." });
   }
 };
 
@@ -224,6 +317,35 @@ exports.updateProfile = async (req, res) => {
     res.json({ message: "Profile updated successfully", user });
   } catch (err) {
     console.error("❌ Update profile error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Debug endpoint to check user password status
+exports.debugUser = async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) {
+      return res.status(400).json({ message: "Email parameter required" });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      hasResetToken: !!user.resetPasswordToken,
+      resetTokenExpires: user.resetPasswordExpires,
+      passwordHashPrefix: user.password?.substring(0, 20) + "...",
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    });
+  } catch (err) {
+    console.error("❌ Debug user error:", err);
     res.status(500).json({ message: err.message });
   }
 };

@@ -1,7 +1,7 @@
 // frontend/src/pages/ManageStudents.js
 import React, { useEffect, useState } from "react";
 import axios from "../../services/api";
-import { Loader2, User, Cpu, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, User, Cpu, CheckCircle2, AlertCircle, Search, IdCard } from "lucide-react";
 
 const ManageStudents = ({ onAssignmentComplete }) => {
   const [students, setStudents] = useState([]);
@@ -11,6 +11,7 @@ const ManageStudents = ({ onAssignmentComplete }) => {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null); // { type: "success" | "error", message: string }
   const [searchTerm, setSearchTerm] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -37,7 +38,7 @@ const ManageStudents = ({ onAssignmentComplete }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!studentId || !rfidTag) {
-      setStatus({ type: "error", message: "Please select both fields" });
+      setStatus({ type: "error", message: "Please select both student and RFID tag" });
       return;
     }
 
@@ -58,6 +59,8 @@ const ManageStudents = ({ onAssignmentComplete }) => {
 
       setRfidTag("");
       setStudentId("");
+      setSearchTerm("");
+      setShowDropdown(false);
       if (onAssignmentComplete) onAssignmentComplete();
     } catch (err) {
       setStatus({
@@ -69,126 +72,195 @@ const ManageStudents = ({ onAssignmentComplete }) => {
     }
   };
 
+  const filteredStudents = students.filter(
+    (s) =>
+      s.userId?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.userId?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (s.className || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const selectedStudent = students.find(s => s._id === studentId);
+
   return (
-    <div className="max-w-lg mx-auto p-6 bg-white shadow-2xl rounded-2xl">
-      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
-        Assign RFID to Student
-      </h2>
+    <div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">RFID Assignment</h2>
+        <p className="text-gray-600">Assign RFID tags to students for attendance tracking</p>
+      </div>
 
       {/* Status Message */}
       {status && (
         <div
-          className={`flex items-center gap-2 p-3 mb-4 rounded-lg text-sm ${status.type === "success"
-              ? "bg-green-100 text-green-800 border border-green-300"
-              : "bg-red-100 text-red-800 border border-red-300"
-            }`}
+          className={`flex items-center gap-3 p-4 mb-6 rounded-xl text-sm font-medium ${
+            status.type === "success"
+              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+              : "bg-red-50 text-red-800 border border-red-200"
+          }`}
         >
           {status.type === "success" ? (
-            <CheckCircle2 size={18} />
+            <CheckCircle2 size={20} className="flex-shrink-0" />
           ) : (
-            <AlertCircle size={18} />
+            <AlertCircle size={20} className="flex-shrink-0" />
           )}
           {status.message}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Student selection */}
-        {/* Student selection with search */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Select Student
-          </label>
-          <div className="relative">
-            <User className="absolute left-3 top-3 text-gray-400" size={18} />
+      {/* Assignment Form */}
+      <div className="bg-gray-50 p-6 rounded-xl">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Student Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Student
+            </label>
+            <div className="relative">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                <input
+                  type="text"
+                  placeholder="Search by name, email, or class..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setShowDropdown(true);
+                  }}
+                  onFocus={() => setShowDropdown(true)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                />
+              </div>
 
-            {/* Search input */}
-            <input
-              type="text"
-              placeholder="Type student name, email or class..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
-              className="w-full pl-10 border rounded-lg p-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-            />
-
-            {/* Dropdown list of results */}
-            {searchTerm && (
-              <ul className="absolute z-10 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-56 overflow-y-auto">
-                {students
-                  .filter(
-                    (s) =>
-                      s.userId?.name.toLowerCase().includes(searchTerm) ||
-                      s.userId?.email.toLowerCase().includes(searchTerm) ||
-                      (s.className || "").toLowerCase().includes(searchTerm)
-                  )
-                  .map((s) => (
-                    <li
-                      key={s._id}
-                      className={`p-2 cursor-pointer hover:bg-blue-100 ${studentId === s._id ? "bg-blue-50" : ""
+              {/* Dropdown */}
+              {showDropdown && searchTerm && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                  {filteredStudents.length > 0 ? (
+                    filteredStudents.map((s) => (
+                      <button
+                        key={s._id}
+                        type="button"
+                        className={`w-full text-left p-4 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0 ${
+                          studentId === s._id ? "bg-blue-50 border-blue-200" : ""
                         }`}
-                      onClick={() => {
-                        setStudentId(s._id);
-                        setSearchTerm(s.userId?.name); // show name in input
-                      }}
-                    >
-                      {s.userId?.name} ({s.userId?.email})
-                      {s.className ? ` - ${s.className}` : ""}
-                    </li>
-                  ))}
-                {/* If no match */}
-                {students.filter(
-                  (s) =>
-                    s.userId?.name.toLowerCase().includes(searchTerm) ||
-                    s.userId?.email.toLowerCase().includes(searchTerm) ||
-                    (s.className || "").toLowerCase().includes(searchTerm)
-                ).length === 0 && (
-                    <li className="p-2 text-gray-500">No student found</li>
+                        onClick={() => {
+                          setStudentId(s._id);
+                          setSearchTerm(s.userId?.name || "");
+                          setShowDropdown(false);
+                        }}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="bg-blue-100 p-2 rounded-lg">
+                            <User className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{s.userId?.name}</p>
+                            <p className="text-sm text-gray-500">{s.userId?.email}</p>
+                            {s.className && (
+                              <p className="text-xs text-blue-600 font-medium">{s.className}</p>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-gray-500">
+                      <User className="mx-auto h-8 w-8 text-gray-300 mb-2" />
+                      <p>No students found</p>
+                    </div>
                   )}
-              </ul>
+                </div>
+              )}
+            </div>
+
+            {/* Selected Student Display */}
+            {selectedStudent && (
+              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-blue-500 p-2 rounded-lg">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-blue-900">{selectedStudent.userId?.name}</p>
+                    <p className="text-sm text-blue-700">{selectedStudent.userId?.email}</p>
+                    {selectedStudent.className && (
+                      <p className="text-xs text-blue-600 font-medium">{selectedStudent.className}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
-        </div>
 
+          {/* RFID Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select RFID Tag
+            </label>
+            <div className="relative">
+              <IdCard className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <select
+                value={rfidTag}
+                onChange={(e) => setRfidTag(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              >
+                <option value="">Choose an available RFID tag...</option>
+                {unassignedRFIDs.map((u) => (
+                  <option key={u._id} value={u.uid}>
+                    {u.uid}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {unassignedRFIDs.length === 0 && (
+              <p className="mt-2 text-sm text-amber-600">No unassigned RFID tags available</p>
+            )}
+          </div>
 
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading || !studentId || !rfidTag}
+            className="w-full flex items-center justify-center gap-2 bg-blue-500 text-white py-3 px-6 rounded-xl hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin" size={18} />
+                Assigning RFID...
+              </>
+            ) : (
+              <>
+                <IdCard size={18} />
+                Assign RFID Tag
+              </>
+            )}
+          </button>
+        </form>
+      </div>
 
-        {/* RFID selection */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Select RFID Tag
-          </label>
-          <div className="relative">
-            <Cpu className="absolute left-3 top-3 text-gray-400" size={18} />
-            <select
-              value={rfidTag}
-              onChange={(e) => setRfidTag(e.target.value)}
-              className="w-full pl-10 border rounded-lg p-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-            >
-              <option value="">-- Choose an RFID Tag --</option>
-              {unassignedRFIDs.map((u) => (
-                <option key={u._id} value={u.uid}>
-                  {u.uid}
-                </option>
-              ))}
-            </select>
+      {/* Summary Stats */}
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
+          <div className="flex items-center space-x-3">
+            <div className="bg-blue-500 p-2 rounded-lg">
+              <User className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-blue-900">{students.length}</p>
+              <p className="text-sm text-blue-700">Students without RFID</p>
+            </div>
           </div>
         </div>
-
-        {/* Submit */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-2 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition disabled:opacity-70"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="animate-spin" size={18} />
-              Assigning...
-            </>
-          ) : (
-            "Assign RFID"
-          )}
-        </button>
-      </form>
+        <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
+          <div className="flex items-center space-x-3">
+            <div className="bg-amber-500 p-2 rounded-lg">
+              <IdCard className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-amber-900">{unassignedRFIDs.length}</p>
+              <p className="text-sm text-amber-700">Available RFID tags</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

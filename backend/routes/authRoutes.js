@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { login, register, forgotPassword, resetPassword, getProfile, updateProfile } = require("../controllers/authController");
+const { login, register, forgotPassword, resetPassword, getProfile, updateProfile, debugUser } = require("../controllers/authController");
 const { protect } = require("../middlewares/authMiddleware");
 
 // router.post("/register", register);
@@ -14,5 +14,8 @@ router.post('/reset-password', resetPassword);
 // Profile routes
 router.get('/profile', protect, getProfile);
 router.put('/profile', protect, updateProfile);
+
+// Debug route (remove in production)
+router.get('/debug-user', debugUser);
 
 module.exports = router;

@@ -1,6 +1,77 @@
-body {
-  font-family: Arial, sans-serif;
-  background-color: #f5f7fa;
-  margin: 0;
-  padding: 0;
+/* Additional utility styles that complement the design system */
+
+/* Layout utilities */
+.container-centered {
+  @apply max-w-md mx-auto px-4;
+}
+
+.container-wide {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+/* Authentication page specific styles */
+.auth-container {
+  @apply min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50 py-12 px-4 sm:px-6 lg:px-8;
+}
+
+.auth-card {
+  @apply w-full max-w-md bg-white rounded-2xl shadow-lg border border-gray-200 p-8;
+}
+
+/* Dashboard layout utilities */
+.dashboard-container {
+  @apply min-h-screen bg-gray-50;
+}
+
+.dashboard-sidebar {
+  @apply fixed inset-y-0 left-0 w-72 bg-white shadow-lg border-r border-gray-200;
+}
+
+.dashboard-main {
+  @apply ml-72 min-h-screen;
+}
+
+.dashboard-content {
+  @apply p-6;
+}
+
+/* Status indicators */
+.status-success {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-100 text-success-800;
+}
+
+.status-warning {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning-100 text-warning-800;
+}
+
+.status-error {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-error-100 text-error-800;
+}
+
+.status-info {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-info-100 text-info-800;
+}
+
+/* Loading states */
+.loading-spinner {
+  @apply animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500;
+}
+
+.loading-skeleton {
+  @apply animate-pulse bg-gray-200 rounded;
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .dashboard-sidebar {
+    @apply transform -translate-x-full transition-transform duration-300 ease-in-out;
+  }
+  
+  .dashboard-sidebar.open {
+    @apply translate-x-0;
+  }
+  
+  .dashboard-main {
+    @apply ml-0;
+  }
 }

@@ -1,5 +1,23 @@
+/**
+ * Enhanced Sidebar Component
+ * 
+ * Features:
+ * - Modern design system with consistent colors and typography
+ * - Improved user profile section with better visual hierarchy
+ * - Enhanced navigation items with hover effects and active states
+ * - Mobile-responsive with slide-out menu and overlay
+ * - Accessible keyboard navigation and ARIA labels
+ * - Smooth transitions and micro-interactions
+ * 
+ * Props:
+ * - userRole: string - User's role (admin, teacher, student)
+ * - userName: string - User's display name
+ * - children: ReactNode - Navigation content (typically NavItem components)
+ * - className: string - Additional CSS classes (optional)
+ */
+
 import React, { useState, useEffect } from "react";
-import { FaUser, FaCog, FaSignOutAlt, FaChevronDown, FaCamera } from "react-icons/fa";
+import { FaUser, FaCog, FaSignOutAlt, FaChevronDown, FaCamera, FaBars, FaTimes } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import axios from "../../services/api";
 
@@ -7,8 +25,9 @@ const Sidebar = ({
   userRole, 
   userName, 
   children, 
-  className = "fixed left-0 top-0 h-screen w-72 bg-white shadow-xl p-6 flex flex-col justify-between z-10 overflow-y-auto" 
+  className = "" 
 }) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [profileData, setProfileData] = useState(null);
@@ -198,84 +217,182 @@ const Sidebar = ({
 
   const getRoleColor = () => {
     switch (userRole) {
-      case 'admin': return 'from-blue-200 to-purple-200';
-      case 'teacher': return 'from-indigo-200 to-purple-200';
-      case 'student': return 'from-indigo-200 to-purple-200';
-      default: return 'from-gray-200 to-gray-300';
+      case 'admin': return 'from-primary-100 to-secondary-100';
+      case 'teacher': return 'from-secondary-100 to-primary-100';
+      case 'student': return 'from-primary-100 to-info-100';
+      default: return 'from-gray-100 to-gray-200';
+    }
+  };
+
+  const getRoleTextColor = () => {
+    switch (userRole) {
+      case 'admin': return 'text-primary-800';
+      case 'teacher': return 'text-secondary-800';
+      case 'student': return 'text-primary-800';
+      default: return 'text-gray-800';
     }
   };
 
   return (
     <>
-      <div className={className}>
-        <div>
-          {/* User Info */}
-          <div className="flex items-center gap-4 mb-10 pb-4 border-b border-gray-100">
-            <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${getRoleColor()} flex items-center justify-center shadow-md relative overflow-hidden`}>
-              {profileData?.profilePicture ? (
-                <img
-                  src={profileData.profilePicture}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-indigo-700 text-lg font-bold">
-                  {getInitials(userName)}
-                </span>
-              )}
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-gray-800">{userName}</h3>
-              <p className="text-sm text-gray-500 capitalize">{userRole}</p>
-            </div>
-          </div>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-3 bg-white rounded-xl shadow-lg border border-gray-200 hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+        aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+        aria-expanded={isMobileMenuOpen}
+        aria-controls="mobile-navigation"
+      >
+        {isMobileMenuOpen ? (
+          <FaTimes className="w-5 h-5 text-gray-700" aria-hidden="true" />
+        ) : (
+          <FaBars className="w-5 h-5 text-gray-700" aria-hidden="true" />
+        )}
+      </button>
 
-          {/* Dynamic Content */}
-          {children}
-        </div>
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
 
-        {/* Profile & Logout Dropdown */}
-        <div className="relative">
-          {dropdownOpen && (
-            <div className="absolute bottom-full mb-2 w-full bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden">
+      {/* Sidebar */}
+      <nav 
+        id="mobile-navigation"
+        className={`
+          fixed left-0 top-0 h-screen w-80 bg-white shadow-2xl border-r border-gray-100 
+          flex flex-col justify-between z-fixed overflow-y-auto
+          transform transition-transform duration-300 ease-in-out
+          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          ${className}
+        `}
+        role="navigation"
+        aria-label="Main navigation"
+      >
+        <div className="p-6">
+          {/* User Profile Section */}
+          <div className="mb-8 pb-6 border-b border-gray-100">
+            <div className="flex items-center gap-4 mb-4">
+              <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${getRoleColor()} flex items-center justify-center shadow-card relative overflow-hidden ring-2 ring-white`}>
+                {profileData?.profilePicture ? (
+                  <img
+                    src={profileData.profilePicture}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className={`${getRoleTextColor()} text-xl font-bold`}>
+                    {getInitials(userName)}
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-xl font-bold text-gray-900 truncate">{userName}</h3>
+                <p className="text-sm font-medium text-gray-500 capitalize tracking-wide">{userRole}</p>
+              </div>
+            </div>
+            
+            {/* Quick Actions */}
+            <div className="flex gap-2">
               <button
-                onClick={() => {
-                  setShowProfileModal(true);
-                  setDropdownOpen(false);
-                }}
-                className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700 transition-colors"
+                onClick={() => setShowProfileModal(true)}
+                className="flex-1 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                aria-label="Edit profile"
               >
-                <FaUser /> Edit Profile
+                <FaUser className="w-3 h-3" aria-hidden="true" />
+                Profile
               </button>
               <button
                 onClick={handleLogout}
-                className="w-full px-4 py-3 text-left hover:bg-red-50 flex items-center gap-3 text-red-600 transition-colors border-t border-gray-100"
+                className="flex-1 px-3 py-2 text-sm font-medium text-error-700 bg-error-50 hover:bg-error-100 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-error-500 focus:ring-offset-2"
+                aria-label="Sign out of account"
               >
-                <FaSignOutAlt /> Logout
+                <FaSignOutAlt className="w-3 h-3" aria-hidden="true" />
+                Logout
               </button>
             </div>
-          )}
-          
-          <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="w-full mt-8 px-6 py-3 rounded-xl bg-gradient-to-r from-gray-500 to-gray-600 text-white font-bold shadow-lg hover:from-gray-600 hover:to-gray-700 transition-all duration-300 flex items-center justify-center gap-3 text-lg"
-          >
-            <FaCog /> Settings
-            <FaChevronDown className={`transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
-          </button>
+          </div>
+
+          {/* Navigation Content */}
+          <div className="space-y-2" role="list" aria-label="Navigation items">
+            {/* Clone children and pass mobile close function */}
+            {React.Children.map(children, child => {
+              if (React.isValidElement(child)) {
+                return React.cloneElement(child, {
+                  onMobileClick: () => setIsMobileMenuOpen(false)
+                });
+              }
+              return child;
+            })}
+          </div>
         </div>
-      </div>
+
+        {/* Settings Dropdown */}
+        <div className="p-6 border-t border-gray-100 bg-gray-50">
+          <div className="relative">
+            {dropdownOpen && (
+              <div className="absolute bottom-full mb-2 w-full bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-dropdown">
+                <button
+                  onClick={() => {
+                    setShowProfileModal(true);
+                    setDropdownOpen(false);
+                  }}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700 transition-colors duration-200 font-medium"
+                >
+                  <FaUser className="w-4 h-4" /> Edit Profile
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="w-full px-4 py-3 text-left hover:bg-error-50 flex items-center gap-3 text-error-600 transition-colors duration-200 border-t border-gray-100 font-medium"
+                >
+                  <FaSignOutAlt className="w-4 h-4" /> Logout
+                </button>
+              </div>
+            )}
+            
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3"
+            >
+              <FaCog className="w-4 h-4" />
+              Settings
+              <FaChevronDown className={`w-3 h-3 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+        </div>
+      </nav>
 
       {/* Profile Modal */}
       {showProfileModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6">Edit Profile</h3>
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-modal p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="profile-modal-title"
+          aria-describedby="profile-modal-description"
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 transform transition-all duration-300 scale-100">
+            <div className="flex items-center justify-between mb-6">
+              <h3 id="profile-modal-title" className="text-2xl font-bold text-gray-900">Edit Profile</h3>
+              <button
+                onClick={() => setShowProfileModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                aria-label="Close profile modal"
+              >
+                <FaTimes className="w-4 h-4 text-gray-500" aria-hidden="true" />
+              </button>
+            </div>
             
-            <form onSubmit={handleProfileUpdate} className="space-y-4">
+            <p id="profile-modal-description" className="sr-only">
+              Edit your profile information including name, email, and profile picture
+            </p>
+            
+            <form onSubmit={handleProfileUpdate} className="space-y-6">
               {/* Profile Picture */}
               <div className="text-center">
-                <div className={`w-24 h-24 mx-auto rounded-full bg-gradient-to-br ${getRoleColor()} flex items-center justify-center shadow-md relative overflow-hidden`}>
+                <div className={`w-28 h-28 mx-auto rounded-2xl bg-gradient-to-br ${getRoleColor()} flex items-center justify-center shadow-card relative overflow-hidden ring-4 ring-white`}>
                   {profileForm.profilePicture ? (
                     <img
                       src={profileForm.profilePicture}
@@ -283,11 +400,11 @@ const Sidebar = ({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="text-indigo-700 text-2xl font-bold">
+                    <span className={`${getRoleTextColor()} text-2xl font-bold`}>
                       {getInitials(profileForm.name)}
                     </span>
                   )}
-                  <label className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
+                  <label className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200 cursor-pointer rounded-2xl">
                     <FaCamera className="text-white text-xl" />
                     <input
                       type="file"
@@ -297,49 +414,51 @@ const Sidebar = ({
                     />
                   </label>
                 </div>
-                <p className="text-sm text-gray-500 mt-2">Click to change photo</p>
+                <p className="text-sm font-medium text-gray-500 mt-3">Click to change photo</p>
               </div>
 
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Name
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Full Name
                 </label>
                 <input
                   type="text"
                   value={profileForm.name}
                   onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all duration-200 font-medium"
+                  placeholder="Enter your full name"
                   required
                 />
               </div>
 
               {/* Email */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Email Address
                 </label>
                 <input
                   type="email"
                   value={profileForm.email}
                   onChange={(e) => setProfileForm(prev => ({ ...prev, email: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all duration-200 font-medium"
+                  placeholder="Enter your email address"
                   required
                 />
               </div>
 
               {/* Buttons */}
-              <div className="flex gap-3 mt-6">
+              <div className="flex gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => setShowProfileModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-6 py-3 border border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white font-semibold rounded-xl hover:from-primary-700 hover:to-primary-800 shadow-lg hover:shadow-xl transition-all duration-200"
                 >
                   Save Changes
                 </button>
@@ -349,6 +468,78 @@ const Sidebar = ({
         </div>
       )}
     </>
+  );
+};
+
+// Enhanced Navigation Item Component with mobile support
+export const NavItem = ({ label, icon, active, onClick, badge, className = "", onMobileClick }) => {
+  const handleClick = () => {
+    onClick();
+    // Close mobile menu when navigation item is clicked
+    if (onMobileClick) {
+      onMobileClick();
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleClick();
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      className={`
+        w-full flex items-center justify-between px-4 py-3 rounded-xl font-semibold 
+        transition-all duration-200 group relative overflow-hidden
+        focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+        ${active
+          ? "bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg shadow-primary-200 border border-primary-600"
+          : "bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900 border border-gray-200 hover:border-gray-300 hover:shadow-card"
+        }
+        ${className}
+      `}
+      role="listitem"
+      aria-current={active ? 'page' : undefined}
+      aria-label={badge > 0 ? `${label} (${badge} notifications)` : label}
+    >
+      {/* Background gradient effect on hover */}
+      {!active && (
+        <div className="absolute inset-0 bg-gradient-to-r from-primary-50 to-secondary-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl" />
+      )}
+      
+      <span className="flex items-center gap-3 relative z-1">
+        <span
+          className={`text-lg transition-colors duration-200 ${
+            active 
+              ? "text-white" 
+              : "text-primary-600 group-hover:text-primary-700"
+          }`}
+          aria-hidden="true"
+        >
+          {icon}
+        </span>
+        <span className="relative z-1">{label}</span>
+      </span>
+      
+      {badge > 0 && (
+        <span
+          className={`
+            text-xs px-2 py-1 rounded-full font-bold relative z-1 min-w-[1.5rem] text-center
+            ${active
+              ? "bg-white bg-opacity-20 text-white"
+              : "bg-error-100 text-error-700 group-hover:bg-error-200"
+            }
+          `}
+          aria-label={`${badge} notifications`}
+        >
+          {badge}
+        </span>
+      )}
+    </button>
   );
 };
 
